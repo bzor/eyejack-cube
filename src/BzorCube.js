@@ -10,6 +10,8 @@ export class BzorCube {
 	lastFrameTime = 0;
 	frame = 0;
 
+	agents = [];
+
 	constructor() {
 	}
 
@@ -26,10 +28,18 @@ export class BzorCube {
 		const frontLight = new THREE.HemisphereLight( 0xffffbb, 0x080820, 1.0 );
 		this.faceFront.add( frontLight );
 
-		this.agentWander = new AgentWander( this );
-		this.agentTrail = new AgentTrail( this );
-		this.agentWander.setTrail( this.agentTrail );
-		this.agentVisFront = new AgentVisFront( this.faceFront, this.agentTrail );
+		this.addAgent( 0x00FFFF );
+		this.addAgent( 0xFF00FF);
+
+	}
+
+	addAgent( col ) {
+
+		const agentWander = new AgentWander( this );
+		const agentTrail = new AgentTrail( agentWander );
+		const agentVisFront = new AgentVisFront( this.faceFront, agentTrail, col );
+		const agentData = { wander: agentWander, trail: agentTrail, visFront: agentVisFront };
+		this.agents.push( agentData );
 
 	}
 
@@ -40,9 +50,16 @@ export class BzorCube {
 		this.lastFrameTime = timestamp;
 		this.frame = frame;
 
-		this.agentWander.update( this.deltaTime );
-		this.agentTrail.update( this.deltaTime );
-		this.agentVisFront.update( this.deltaTime );
+		for ( let i = 0; i < this.agents.length; i++ ) {
+
+			let agent = this.agents[ i ];
+			agent.wander.update( this.deltaTime );
+			agent.trail.update( this.deltaTime );
+			agent.visFront.update( this.deltaTime );
+	
+
+		}
+
 
 	}
 

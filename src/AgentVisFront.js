@@ -12,10 +12,11 @@ export class AgentVisFront {
 	vec1 = new THREE.Vector3();
 	vec2 = new THREE.Vector3();
 
-	constructor( faceGroup, trail ) {
+	constructor( faceGroup, trail, col ) {
 
 		this.faceGroup = faceGroup;
 		this.agentTrail = trail;
+		this.col = col;
 
 		this.init();
 
@@ -26,7 +27,7 @@ export class AgentVisFront {
 		const scale = this.elemScale;
 		const scaleMult = 2.0;
 		const geo = new THREE.BoxGeometry( scale * scaleMult, scale * scaleMult, scale );
-		const mat = new THREE.MeshStandardMaterial( { color: 0x00FFFF } );
+		const mat = new THREE.MeshStandardMaterial( { color: this.col } );
 
 		for ( let i = 0; i < this.agentTrail.numSegments; i++ ) {
 

@@ -2,18 +2,15 @@ import * as THREE from './libs/three.module.js';
 
 export class AgentTrail {
 
-	main;
-
 	dropDelay = 0.032;
 	dropTick = 0;
 
 	segments = [];
 	numSegments = 128;
 
-	constructor( main ) {
+	constructor( wander ) {
 
-		this.main = main;
-		this.agentWander = this.main.agentWander;
+		this.agentWander = wander;
 		this.reset();
 
 	}

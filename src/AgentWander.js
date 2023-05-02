@@ -8,7 +8,7 @@ export class AgentWander {
 
 	boundingSphereRadius = 0.5;
 	boundingForce;
-	boundingForceMult = 1;
+	boundingForceMult = 0.95;
 
 	currentPosition;
 	currentVelocity;
@@ -16,9 +16,9 @@ export class AgentWander {
 
 	//wander steering
 	wanderSphereDistance = 0.1;
-	wanderSphereRadius = 2;
-	wanderAngleMaxChange = 4;
-	wanderBoundsAngleMaxChange = 4;
+	wanderSphereRadius = 5;
+	wanderAngleMaxChange = 8;
+	wanderBoundsAngleMaxChange = 8;
 	wanderAngle; //quaternion
 	wanderSphereCenter;
 	wanderForce;
@@ -30,7 +30,7 @@ export class AgentWander {
 	maxSteeringForce = 5;
 
 	//trail avoid
-	trailAvoidDist = 0.2;
+	trailAvoidDist = 0.25;
 
 	//cache vectors
 	vec1 = new THREE.Vector3();
@@ -93,12 +93,6 @@ export class AgentWander {
 
 	}
 
-	setTrail( trail ) {
-
-		this.trail = trail;
-
-	}
-
 	update( deltaTime ) {
 	
 		this.agentLookat.position.copy( this.agentPoint );
@@ -124,17 +118,38 @@ export class AgentWander {
 		//dampen bounding force
 		this.boundingForce.multiplyScalar( this.boundingForceMult );
 
-		//avoid trail
+		//attract each other
 		this.trailAvoidForce.setScalar( 0 );
-		for ( let i = 0; i < this.trail.numSegments; i++ ) {
+		for ( let i = 0; i < this.main.agents.length; i++ ) {
 
-			this.vec1.copy( this.trail.segments[ i ] );
-			let dist = this.vec1.distanceToSquared( this.agentPoint );
-			if ( dist < this.trailAvoidDist ) {
+			let agent = this.main.agents[ i ];
+			if ( agent.wander == this ) {
 
-				let forceMult = ( this.trailAvoidDist - dist ) * 10.0;
-				this.vec1.copy( this.agentPoint ).sub( this.trail.segments[ i ] ).normalize().multiplyScalar( forceMult );
-				this.trailAvoidForce.add( this.vec1 );
+				continue;
+
+			}
+			this.vec1.copy( agent.wander.agentPoint );
+			let attactMult = 1.5;
+			this.vec1.copy( agent.wander.agentPoint ).sub( this.agentPoint ).normalize().multiplyScalar( attactMult );
+			this.trailAvoidForce.add( this.vec1 );
+
+		}
+
+		//avoid trails
+		for ( let i = 0; i < this.main.agents.length; i++ ) {
+
+			let agent = this.main.agents[ i ];
+			for ( let j = 0; j < agent.trail.numSegments; j++ ) {
+
+				this.vec1.copy( agent.trail.segments[ j ] );
+				let dist = this.vec1.distanceToSquared( this.agentPoint );
+				if ( dist < this.trailAvoidDist ) {
+
+					let forceMult = ( this.trailAvoidDist - dist ) * 50.0;
+					this.vec1.copy( this.agentPoint ).sub( agent.trail.segments[ j ] ).normalize().multiplyScalar( forceMult );
+					this.trailAvoidForce.add( this.vec1 );
+	
+				}	
 
 			}
 
