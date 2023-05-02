@@ -15,19 +15,22 @@ export class AgentWander {
 	centerPoint;
 
 	//wander steering
-	wanderSphereDistance = 2;
-	wanderSphereRadius = 0.1;
-	wanderAngleMaxChange = 1;
-	wanderBoundsAngleMaxChange = 1;
+	wanderSphereDistance = 0.1;
+	wanderSphereRadius = 2;
+	wanderAngleMaxChange = 4;
+	wanderBoundsAngleMaxChange = 4;
 	wanderAngle; //quaternion
 	wanderSphereCenter;
 	wanderForce;
 
 	//max velocity and max velocity squared
-	maxVelocity = 0.01;
+	maxVelocity = 0.015;
 	maxVelocitySq;
 	//max steering force per frame
 	maxSteeringForce = 5;
+
+	//trail avoid
+	trailAvoidDist = 0.2;
 
 	//cache vectors
 	vec1 = new THREE.Vector3();
@@ -72,17 +75,27 @@ export class AgentWander {
 		this.wanderForce = new THREE.Vector3();
 		this.wanderDir = new THREE.Vector3();
 
-		this.initAgentMarker();
+		//trail avoid force
+		this.trailAvoidDist = this.trailAvoidDist * this.trailAvoidDist;
+		this.trailAvoidForce = new THREE.Vector3();
+
+		//this.initAgentMarker();
 
 	}
 
 	initAgentMarker() {
 
-		const markerSize = 0.04;
+		const markerSize = 0.02;
 		const geo = new THREE.BoxGeometry( markerSize, markerSize, markerSize );
 		const mat = new THREE.MeshBasicMaterial( { color: 0x00FFFF } );
 		this.agentMarker = new THREE.Mesh( geo, mat );
 		this.main.faceFront.add( this.agentMarker );
+
+	}
+
+	setTrail( trail ) {
+
+		this.trail = trail;
 
 	}
 
@@ -108,9 +121,24 @@ export class AgentWander {
 			this.boundingForce.setScalar( 0 );
 
 		}
-
 		//dampen bounding force
 		this.boundingForce.multiplyScalar( this.boundingForceMult );
+
+		//avoid trail
+		this.trailAvoidForce.setScalar( 0 );
+		for ( let i = 0; i < this.trail.numSegments; i++ ) {
+
+			this.vec1.copy( this.trail.segments[ i ] );
+			let dist = this.vec1.distanceToSquared( this.agentPoint );
+			if ( dist < this.trailAvoidDist ) {
+
+				let forceMult = ( this.trailAvoidDist - dist ) * 10.0;
+				this.vec1.copy( this.agentPoint ).sub( this.trail.segments[ i ] ).normalize().multiplyScalar( forceMult );
+				this.trailAvoidForce.add( this.vec1 );
+
+			}
+
+		}
 
 		this.wanderSphereCenter.copy( this.currentVelocity ).normalize().multiplyScalar( this.wanderSphereDistance );
 		this.q1.random();
@@ -120,6 +148,7 @@ export class AgentWander {
 		this.wanderForce.copy( this.wanderSphereCenter ).add( this.wanderDir );
 		this.wanderForce.clampLength( 0, this.maxSteeringForce );
 
+		this.wanderForce.add( this.trailAvoidForce );
 		this.vec1.copy( this.wanderForce ).multiplyScalar( deltaTime );
 		this.currentVelocity.add( this.vec1 );
 		this.vec1.copy( this.boundingForce ).multiplyScalar( deltaTime );
@@ -128,7 +157,7 @@ export class AgentWander {
 
 		this.agentPoint.add( this.currentVelocity );
 
-		this.agentMarker.position.copy( this.agentPoint );
+		//this.agentMarker.position.copy( this.agentPoint );
 
 	}
 
