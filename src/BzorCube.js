@@ -1,6 +1,13 @@
 import * as THREE from './libs/three.module.js';
+import { AgentWander } from './AgentWander.js';
+import { AgentTrail } from './AgentTrail.js';
 
 export class BzorCube {
+
+	deltaTime = 0;
+	maxDelta = 1000;
+	lastFrameTime = 0;
+	frame = 0;
 
 	constructor() {
 	}
@@ -15,25 +22,21 @@ export class BzorCube {
 		this.faceTop = scene.getObjectByName( "faceTop", true );
 		this.faceBottom = scene.getObjectByName( "faceBottom", true );
 
-		this.test();
+		this.agentWander = new AgentWander( this );
+		this.agentTrail = new AgentTrail( this );
 
 	}
 
-	test() {
+	update( timestamp, frame ) {
 
-		let size = 0.5;
-		let geo = new THREE.BoxGeometry( size, size, size );
-		let mat = new THREE.MeshBasicMaterial( { color: 0x00FF0 } );
-		let mesh = new THREE.Mesh( geo, mat );
-		this.faceFront.add( mesh );
+		this.deltaTime = timestamp - this.lastFrameTime;
+		this.deltaTime = Math.max( this.deltaTime, this.maxDelta );
+		this.lastFrameTime = timestamp;
+		this.frame = frame;
 
-		size = 0.5;
-		geo = new THREE.DodecahedronGeometry( size );
-		mesh = new THREE.Mesh( geo, mat );
-		this.faceLeft.add( mesh );
-
+		this.agentWander.update( this.deltaTime );
+		this.agentTrail.update( this.deltaTime );
 
 	}
 
 }
-

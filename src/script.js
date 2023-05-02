@@ -3,6 +3,7 @@ import { EJPlayer } from './libs/ejx.mjs';
 import { BzorCube } from './BzorCube.js';
 
 let hasInit = false;
+let bzorCube;
 
 window.THREE = THREE; // Used by APP Scripts.
 
@@ -18,6 +19,8 @@ import(contentPath).then(module => {
 });
 
 const render = (timestamp, frame) => {
+
+
 	player.render();
 
 	if (player.contentCurrent() != null && !hasInit ) {
@@ -30,6 +33,13 @@ const render = (timestamp, frame) => {
 		}
 
 	}
+
+	if ( bzorCube != undefined ) {
+
+		bzorCube.update( timestamp, frame );
+
+	}
+	
 }
 
 const resize = () => {
@@ -44,7 +54,7 @@ player.resizeOverrideFunc = resize.bind(this);
 function init () {
 
 	console.log( player );
-	const bzorCube = new BzorCube();
+	bzorCube = new BzorCube();
 	const content = player.contentCurrent();
 	bzorCube.init( content.scene );
 
