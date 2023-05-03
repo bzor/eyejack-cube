@@ -25,8 +25,11 @@ export class BzorCube {
 		this.faceTop = scene.getObjectByName( "faceTop", true );
 		this.faceBottom = scene.getObjectByName( "faceBottom", true );
 
-		const frontLight = new THREE.HemisphereLight( 0xffffbb, 0x080820, 1.0 );
+		const frontLight = new THREE.DirectionalLight( 0xffffff, 1 );
+		frontLight.position.set( 0, 1.0, 1.0 );
 		this.faceFront.add( frontLight );
+		const frontAmbLight = new THREE.AmbientLight( 0xffffff, 0.04 );
+		this.faceFront.add( frontAmbLight );
 
 		this.addAgent( 0x00FFFF );
 		this.addAgent( 0xFF00FF);

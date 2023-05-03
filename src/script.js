@@ -9,7 +9,7 @@ window.THREE = THREE; // Used by APP Scripts.
 
 const player = new EJPlayer();
 window.player = player;
-player.setCube( 'Plain' );
+player.setCube( 'Glass' );
 player.setEnvironment( 'None' );
 
 const contentPath = './content/content.js';

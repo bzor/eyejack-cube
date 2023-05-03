@@ -6,7 +6,7 @@ export class AgentWander {
 	agentLookat;
 	agentMarker;
 
-	boundingSphereRadius = 0.5;
+	boundingSphereRadius = 0.6;
 	boundingForce;
 	boundingForceMult = 0.95;
 
@@ -24,7 +24,7 @@ export class AgentWander {
 	wanderForce;
 
 	//max velocity and max velocity squared
-	maxVelocity = 0.015;
+	maxVelocity = 0.008;
 	maxVelocitySq;
 	//max steering force per frame
 	maxSteeringForce = 5;
@@ -105,7 +105,7 @@ export class AgentWander {
 		if ( distanceFromCenter > this.boundingSphereRadius ) {
 
 			//( centerPoint - agentPoint ) * ( distanceFromCenter - boundingSphereRadius )
-			this.boundingForce.copy( this.centerPoint ).sub( this.agentPoint ).multiplyScalar( distanceFromCenter - this.boundingSphereRadius );
+			this.boundingForce.copy( this.centerPoint ).sub( this.agentPoint ).multiplyScalar( ( distanceFromCenter - this.boundingSphereRadius ) * 0.3 );
 
 			this.agentLookat.lookAt( this.centerPoint );
 			this.wanderAngle.rotateTowards( this.agentLookat.quaternion, this.wanderAngleMaxChange * deltaTime );
@@ -129,7 +129,7 @@ export class AgentWander {
 
 			}
 			this.vec1.copy( agent.wander.agentPoint );
-			let attactMult = 1.5;
+			let attactMult = 2.5;
 			this.vec1.copy( agent.wander.agentPoint ).sub( this.agentPoint ).normalize().multiplyScalar( attactMult );
 			this.trailAvoidForce.add( this.vec1 );
 

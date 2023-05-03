@@ -5,12 +5,23 @@ export class AgentVisFront {
 	faceGroup;
 	agentTrail;
 
-	spineData = [];
+	elemScale = 0.01;
 
-	elemScale = 0.028;
+	numSpineInstances = 2048;
+	spineElemData = [];
 
+	pos = new THREE.Vector3();
 	vec1 = new THREE.Vector3();
 	vec2 = new THREE.Vector3();
+	vec3 = new THREE.Vector3();
+	mat3 = new THREE.Matrix3();
+	mat4 = new THREE.Matrix4();
+	matRot4 = new THREE.Matrix4();
+	q1 = new THREE.Quaternion();
+	scale = new THREE.Vector3();
+	up = new THREE.Vector3( 0, 1.0, 0 );
+
+	tick = 0;
 
 	constructor( faceGroup, trail, col ) {
 
@@ -26,14 +37,19 @@ export class AgentVisFront {
 
 		const scale = this.elemScale;
 		const scaleMult = 2.0;
-		const geo = new THREE.BoxGeometry( scale * scaleMult, scale * scaleMult, scale );
+		//const geo = new THREE.BoxGeometry( scale, scale, scale );
+		const geo = new THREE.IcosahedronGeometry( scale, 2 );
 		const mat = new THREE.MeshStandardMaterial( { color: this.col } );
+		mat.roughness = 0.25;
 
-		for ( let i = 0; i < this.agentTrail.numSegments; i++ ) {
+		const spineMesh = new THREE.InstancedMesh( geo, mat, this.numSpineInstances );
+		spineMesh.instanceMatrix.setUsage( THREE.StreamDrawUsage );
+		this.faceGroup.add( spineMesh );
+		this.spineMesh = spineMesh;
 
-			let mesh = new THREE.Mesh( geo, mat );
-			this.spineData.push( mesh );
-			this.faceGroup.add( mesh );
+		for ( let i = 0; i < this.numSpineInstances; i++ ) {
+
+			this.spineElemData.push( { rnd: new THREE.Vector3().randomDirection().multiplyScalar( 0.05 ) } );
 
 		}
 
@@ -41,28 +57,58 @@ export class AgentVisFront {
 
 	update( deltaTime ) {
 
-		for ( let i = 0; i < this.agentTrail.numSegments; i++ ) {
+		this.tick += deltaTime;
 
-			let t = i / ( this.agentTrail.numSegments - 1 );
+		for ( let i = 0; i < this.numSpineInstances; i++ ) {
 
-			if ( i == 0 ) {
+			let t = i / this.numSpineInstances;
+			let segmentI = Math.floor( t * this.agentTrail.numSegments );
+			let segmentT = t * this.agentTrail.numSegments - Math.floor( t * this.agentTrail.numSegments );
+			let data = this.spineElemData[ i ];
 
-				this.vec1.copy( this.agentTrail.segments[ 0 ] ).sub( this.agentTrail.segments[ 1 ] ).add( this.agentTrail.segments[ 0 ] );
+			if ( segmentI < this.agentTrail.numSegments - 1 ) {
+
+				this.pos.copy( this.agentTrail.segments[ segmentI ] ).lerp( this.agentTrail.segments[ segmentI + 1 ], segmentT );
 
 			} else {
 
-				this.vec1.copy( this.agentTrail.segments[ i - 1 ] ).sub( this.agentTrail.segments[ i ] ).add( this.agentTrail.segments[ i ] );
+				this.pos.copy( this.agentTrail.segments[ segmentI ] );
 
 			}
 
-			let elem = this.spineData[ i ];
-			elem.lookAt( this.vec1 );
-			elem.position.copy( this.agentTrail.segments[ i ] );
-			let scXY = THREE.MathUtils.smoothstep( t, 0, 0.1 ) * ( 1.0 - THREE.MathUtils.smoothstep( t, 0.9, 1.0 ) );
-			elem.scale.set( scXY, scXY, 1 );
+
+			if ( segmentI == 0 ) {
+
+				this.vec2.copy( this.pos );
+				this.vec2.add( this.vec1.copy( this.agentTrail.segments[ 0 ] ).sub( this.agentTrail.segments[ 1 ] ).normalize() );
+
+			} else {
+
+				this.vec2.copy( this.pos );
+				this.vec2.add( this.vec1.copy( this.agentTrail.segments[ segmentI - 1 ] ).sub( this.agentTrail.segments[ segmentI ] ).normalize() );
+
+			}
+
+			this.matRot4.lookAt( this.pos, this.vec2, this.up );
+			this.q1.setFromRotationMatrix( this.matRot4 );
+
+			let scXY = THREE.MathUtils.smoothstep( t, 0, 0.1 ) * ( 1.0 - THREE.MathUtils.smoothstep( t, 0.9, 1.0 ) ) * 1.0;
+			this.scale.setScalar( scXY + Math.sin( t * Math.PI * 40.0 + this.tick * 5.0 ) * 0.7 );
+			//this.scale.set( scXY, scXY, 1.0 );
+
+			this.vec3.copy( data.rnd ).multiplyScalar( scXY + Math.sin( t * Math.PI * 4 ) * 0.7 + Math.sin( t * Math.PI * 4.0 + this.tick * -5.0 ) * 0.2 );
+			this.pos.add( this.vec3 );
+
+			this.mat4.compose( this.pos, this.q1, this.scale );
+
+			this.spineMesh.setMatrixAt( i, this.mat4 );
+			this.spineMesh.instanceMatrix.needsUpdate = true;
 
 		}
 
 	}
 
 }
+
+
+
