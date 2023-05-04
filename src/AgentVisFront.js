@@ -93,10 +93,12 @@ export class AgentVisFront {
 			this.q1.setFromRotationMatrix( this.matRot4 );
 
 			let scXY = THREE.MathUtils.smoothstep( t, 0, 0.1 ) * ( 1.0 - THREE.MathUtils.smoothstep( t, 0.9, 1.0 ) ) * 1.0;
-			this.scale.setScalar( scXY + Math.sin( t * Math.PI * 40.0 + this.tick * 5.0 ) * 0.7 );
+			//let sc = scXY + Math.sin( t * Math.PI * 40.0 + this.tick * 5.0 ) * 0.7;
+			let sc = scXY;
+			this.scale.setScalar( sc );
 			//this.scale.set( scXY, scXY, 1.0 );
 
-			this.vec3.copy( data.rnd ).multiplyScalar( scXY + Math.sin( t * Math.PI * 4 ) * 0.7 + Math.sin( t * Math.PI * 4.0 + this.tick * -5.0 ) * 0.2 );
+			this.vec3.copy( data.rnd ).multiplyScalar( scXY + Math.sin( t * Math.PI * -2.0 ) * 0.7 );
 			this.pos.add( this.vec3 );
 
 			this.mat4.compose( this.pos, this.q1, this.scale );
