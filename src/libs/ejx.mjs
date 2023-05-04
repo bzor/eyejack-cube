@@ -1,4 +1,4 @@
-import { Vector3, BufferGeometry, Float32BufferAttribute, Raycaster, Vector2, MathUtils, Mesh, BackSide, FrontSide, Color, RawShaderMaterial, Vector4, DoubleSide, sRGBEncoding, RepeatWrapping, NearestFilter, LinearEncoding, TextureLoader, BoxGeometry, MeshBasicMaterial, Object3D, PlaneGeometry, Clock, Plane, WebGLRenderer, PerspectiveCamera, Scene, WebGLRenderTarget, ClampToEdgeWrapping, LinearFilter, RGBAFormat, UnsignedByteType, Texture, OrthographicCamera, ShaderMaterial, Matrix4, Box2, Matrix3, NoToneMapping } from 'three';
+import { Vector3, BufferGeometry, Float32BufferAttribute, Raycaster, Vector2, MathUtils, Mesh, BackSide, FrontSide, Color, RawShaderMaterial, Vector4, DoubleSide, sRGBEncoding, RepeatWrapping, NearestFilter, LinearEncoding, TextureLoader, BoxGeometry, MeshBasicMaterial, Object3D, PlaneGeometry, Clock, Plane, WebGLRenderer, NoToneMapping, PerspectiveCamera, Scene, WebGLRenderTarget, ClampToEdgeWrapping, LinearFilter, RGBAFormat, UnsignedByteType, Texture, OrthographicCamera, ShaderMaterial, Matrix4, Box2, Matrix3 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
@@ -351,6 +351,10 @@ function initCubeMaterial$2() {
         vec2 borderTopRight = smoothstep(vec2(strokeWidth * feather), vec2(strokeWidth), 1.0 - uv);
         return 1.0 - borderBottomLeft.x * borderBottomLeft.y * borderTopRight.x * borderTopRight.y;
       }
+
+      vec4 LinearTosRGB( vec4 value ) {
+        return vec4( mix( pow( value.rgb, vec3( 0.41666 ) ) * 1.055 - vec3( 0.055 ), value.rgb * 12.92, vec3( lessThanEqual( value.rgb, vec3( 0.0031308 ) ) ) ), value.a );
+      }      
       
       void main()  {
         vec4 colorTex = vec4(0.0, 0.0, 0.0, 0.0);
@@ -372,6 +376,8 @@ function initCubeMaterial$2() {
         } else {
           colorFinal = alphaBlend(colorTex, colorBorder); // content first, then blend border on top.
         }
+
+        colorFinal = LinearTosRGB( colorFinal );
 
         gl_FragColor = colorFinal;
       }      
@@ -756,7 +762,7 @@ class TexSwitch {
 
   loadNormalMap(materials, _texNormalId) {
     this.texNormalId = _texNormalId;
-    this.texLoader.load('/examples/internal/normal/' + this.texNormal[_texNormalId], function(tex) {
+    this.texLoader.load('/libs/ejx/assets/normal/' + this.texNormal[_texNormalId], function(tex) {
       tex.encoding = sRGBEncoding;
       tex.wrapS = RepeatWrapping;
       tex.wrapT = RepeatWrapping;
@@ -772,7 +778,7 @@ class TexSwitch {
   loadEnvMap(materials, _texEnvId) {
     // const _this = this;
     this.texEnvId = _texEnvId;
-    this.rgbeLoader.load('/examples/internal/env/' + this.texEnv[_texEnvId], function(tex) {
+    this.rgbeLoader.load('/libs/ejx/assets/env/' + this.texEnv[_texEnvId], function(tex) {
       tex.minFilter = NearestFilter;
       tex.wrapS = RepeatWrapping;
       tex.wrapT = RepeatWrapping;
@@ -809,7 +815,7 @@ class TexSwitch {
     // if(texRoughnessId>texRoughness.length-1) texRoughnessId=0;
     this.texRoughnessId = _texRoughnessId;
     // console.log(_texRoughnessId);
-    this.texLoader.load('/examples/internal/rough/' + this.texRoughness[_texRoughnessId], function(tex) {
+    this.texLoader.load('/libs/ejx/assets/rough/' + this.texRoughness[_texRoughnessId], function(tex) {
       tex.encoding = sRGBEncoding;
 
       mat.roughnessMap = tex;
@@ -1136,12 +1142,15 @@ class EJCubeMask extends EJCubeBase {
   }
 }
 
+/* eslint-disable max-len */
+
 class EJEnv {
   constructor(container, camera) {
     this.container = container;
     this.camera = camera;
 
-    this.texture = new TextureLoader().load('/examples/internal/gallery.jpg', this.textureLoaded.bind(this));
+    this.texture = new TextureLoader().load('./libs/ejx/assets/gallery.jpg', this.textureLoaded.bind(this));
+    this.texture.encoding = sRGBEncoding;
 
     this.geometry = new PlaneGeometry(1, 1, 1, 1);
     this.material = new MeshBasicMaterial({
@@ -1312,6 +1321,11 @@ class EJPlayer {
       this.renderer.autoClear = false;
       this.renderer.clippingPlanes = this.clippingPlanesEmpty;
       this.renderer.xr.enabled = true;
+      // color grading.
+      this.renderer.outputEncoding = sRGBEncoding;
+      this.renderer.toneMapping = NoToneMapping;
+      this.renderer.toneMappingExposure = 1;
+      this.renderer.useLegacyLights = false;
     }
 
     document.body.appendChild(this.renderer.domElement);
@@ -1347,6 +1361,8 @@ class EJPlayer {
 
     this.cubeInit(EJCubeStylePlain);
 
+    this.inputEventsInit();
+
     window.addEventListener('resize', this.resizeHandler.bind(this));
 
     this.renderer.setAnimationLoop( this.animationLoop.bind(this) );
@@ -1362,7 +1378,7 @@ class EJPlayer {
       format: RGBAFormat,
       type: UnsignedByteType,
       anisotropy: Texture.anisotropy,
-      encoding: LinearEncoding,
+      encoding: sRGBEncoding,
       depthBuffer: true,
       stencilBuffer: true,
       samples: 0,
@@ -1498,13 +1514,16 @@ class EJPlayer {
   }
 
   renderContent(content) {
-    if (content.instance === undefined || content.instance === null) {
+    if (!content.instance) {
       return;
     }
-    if (content.instance.render === undefined || content.instance.render === null) {
+    if (!content.instance.render) {
+      console.log('content.instance.render does not exist.');
       return;
     }
-    if (this.cube === undefined || this.cube === null) {
+    if (!this.cube) {
+      this.renderer.render(this.scene, this.camera);
+      if (content.instance.update) content.instance.update();
       content.instance.render();
       return;
     }
@@ -1779,15 +1798,20 @@ class EJPlayer {
       this.renderer.render(this.cubeMaskPass, this.cubeMaskPassCamera);
     }
 
-    this.renderer.toneMapping = NoToneMapping;
-    this.renderer.toneMappingExposure = 1.0;
-    this.renderer.outputEncoding = LinearEncoding;
-    // this.renderer.resetState();
+    // this.renderer.outputEncoding = sRGBEncoding;
+    // this.renderer.toneMapping = NoToneMapping;
+    // this.renderer.toneMappingExposure = 1;
+    // this.renderer.useLegacyLights = false;
 
     this.renderer.setRenderTarget(renderTargetSaved);
     this.renderer.render(this.scene, this.camera);
   }
 
+  dispose() {
+    this.inputEventsKill();
+  }
+
+  // -------------------------------------------------------------- Resize
   resize( w = window.innerWidth, h = window.innerHeight, r = window.devicePixelRatio ) {
     const wr = w * r; // width retina.
     const hr = h * r; // height retina.
@@ -1825,6 +1849,30 @@ class EJPlayer {
       return;
     }
     this.resize();
+  }
+
+  // -------------------------------------------------------------- Input Events
+  inputEventsInit() {
+    document.addEventListener( 'keydown', this.inputHandler.bind(this) );
+    document.addEventListener( 'keyup', this.inputHandler.bind(this) );
+    document.addEventListener( 'pointerdown', this.inputHandler.bind(this) );
+    document.addEventListener( 'pointerup', this.inputHandler.bind(this) );
+    document.addEventListener( 'pointermove', this.inputHandler.bind(this) );
+  }
+
+  inputEventsKill() {
+    document.removeEventListener( 'keydown', this.inputHandler.bind(this) );
+    document.removeEventListener( 'keyup', this.inputHandler.bind(this) );
+    document.removeEventListener( 'pointerdown', this.inputHandler.bind(this) );
+    document.removeEventListener( 'pointerup', this.inputHandler.bind(this) );
+    document.removeEventListener( 'pointermove', this.inputHandler.bind(this) );
+  }
+
+  inputHandler( event ) {
+    const content = this.contentCurrent();
+    if (content && content.instance && content.instance[event.type]) {
+      content.instance[event.type](event);
+    }
   }
 
   // -------------------------------------------------------------- Environment
@@ -1870,12 +1918,25 @@ class EJPlayer {
   }
 
   cubeInit(cubeStyle) {
+    let validStyle = false;
+    validStyle = validStyle || (cubeStyle === EJCubeStyleNone);
+    validStyle = validStyle || (cubeStyle === EJCubeStylePlain);
+    validStyle = validStyle || (cubeStyle === EJCubeStyleGlass);
+    validStyle = validStyle || (cubeStyle === EJCubeStyleGlass3);
+    if ( validStyle == false ) {
+      return;
+    }
+    let sameStyle = true;
+    sameStyle = sameStyle && (this.cube != null);
+    sameStyle = sameStyle && (this.cube.style === cubeStyle);
+    if ( sameStyle ) {
+      return;
+    }
+
     this.cubeKill();
 
     if (cubeStyle == EJCubeStyleNone) {
       return;
-    } else if (cubeStyle == EJCubeStyleMask) {
-      this.cube = new EJCubeMask(this.cubeContainer, this.config.gui);
     } else if (cubeStyle == EJCubeStylePlain) {
       this.cube = new EJCube1(this.cubeContainer, this.config.gui);
     } else if (cubeStyle == EJCubeStyleGlass) {
@@ -1955,6 +2016,11 @@ class EJPlayer {
       camera: content.camera,
       gui: content.gui,
     });
+
+    if ( content.instance && content.instance.cubeStyle ) {
+      const cubeStyle = content.instance.cubeStyle();
+      this.cubeInit( cubeStyle );
+    }
   }
 
   contentKill(content) {

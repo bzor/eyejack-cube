@@ -24,7 +24,7 @@ export const main = ({ renderer, renderTarget, camera, scene, gui }) => {
 		// note, this won't work in the editor,
 		// where the load method needs to be called by the editor.
 		const fileLoadHandler = (response) => {
-			load( JSON.parse( response ) );
+			load( JSON.parse( response ), false );
 		}
 		const fileLoader = new THREE.FileLoader();
 		fileLoader.load( 
@@ -35,9 +35,16 @@ export const main = ({ renderer, renderTarget, camera, scene, gui }) => {
 		);
 	}
 
-	const load = (json) => {
+	const load = (json, inEditor=true) => {
 
 		var project = json.project;
+
+		if ( project.shadows !== undefined ) renderer.shadowMap.enabled = project.shadows;
+		if ( project.shadowType !== undefined ) renderer.shadowMap.type = project.shadowType;
+		if ( project.toneMapping !== undefined ) renderer.toneMapping = project.toneMapping;
+		if ( project.toneMappingExposure !== undefined ) renderer.toneMappingExposure = project.toneMappingExposure;
+		if ( project.useLegacyLights !== undefined ) renderer.useLegacyLights = project.useLegacyLights;
+
 		contentPerCubeFace.front = project.faceFront;
 		contentPerCubeFace.left = project.faceLeft;
 		contentPerCubeFace.back = project.faceBack;
@@ -46,8 +53,13 @@ export const main = ({ renderer, renderTarget, camera, scene, gui }) => {
 		contentPerCubeFace.bottom = project.faceBottom;
 
 		sceneLoaded = objectLoader.parse( json.scene );
-		const cameraLoaded = objectLoader.parse( json.camera ); // not used.
-
+		const cameraLoaded = objectLoader.parse( json.camera );
+		if(inEditor) {
+			// when launching in editor, copy over editor camera so that it lines up with the player camera.
+			cameraLoaded.updateMatrixWorld();
+			camera.copy( cameraLoaded );
+		}
+		
 		scene.add( sceneLoaded );
 
 		events = {
@@ -128,7 +140,7 @@ export const main = ({ renderer, renderTarget, camera, scene, gui }) => {
 			}
 		});
 
-		renderer.render(scene, camera);
+		renderer.render(sceneLoaded, camera);
 
 		sceneLoaded.children.forEach( ( child, i ) => {
 			child.visible = visibleSave[i];
@@ -143,24 +155,24 @@ export const main = ({ renderer, renderTarget, camera, scene, gui }) => {
 		//
 	};
 
-	const keydown = (event) => {
-		dispatch( events.keydown, event );
-	}
-
-	const keyup = (event) => {
-		dispatch( events.keyup, event );
-	}
-
 	const pointerdown = (event) => {
 		dispatch( events.pointerdown, event );
+	}
+
+	const pointermove = (event) => {
+		dispatch( events.pointermove, event );
 	}
 
 	const pointerup = (event) => {
 		dispatch( events.pointerup, event );
 	}
 
-	const pointermove = (event) => {
-		dispatch( events.pointermove, event );
+	const keydown = (event) => {
+		dispatch( events.keydown, event );
+	}
+
+	const keyup = (event) => {
+		dispatch( events.keyup, event );
 	}
 
 	const dispatch = (array, event) => {
@@ -176,15 +188,12 @@ export const main = ({ renderer, renderTarget, camera, scene, gui }) => {
 		resize: resize,
 		dispose: dispose,
 		pointerdown: pointerdown,
-		pointerup: pointerup,
 		pointermove: pointermove,
+		pointerup: pointerup,
 		keydown: keydown,
 		keyup: keyup,
-		canGoInsideCube: () => {
-			return true;
-		},
-    contentPerCubeFace: () => {  
-			return contentPerCubeFace;
-		}
+		cubeStyle: () => { return 'Plain'; },
+		canGoInsideCube: () => { return true; },
+    contentPerCubeFace: () => { return contentPerCubeFace; },
   };
 };

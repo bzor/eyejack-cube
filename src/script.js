@@ -5,6 +5,8 @@ import { BzorCube } from './BzorCube.js';
 let hasInit = false;
 let bzorCube;
 
+console.log ( "bzor-cube" );
+
 window.THREE = THREE; // Used by APP Scripts.
 
 const player = new EJPlayer();

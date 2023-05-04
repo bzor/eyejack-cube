@@ -2,6 +2,11 @@ import * as THREE from './libs/three.module.js';
 import { AgentWander } from './AgentWander.js';
 import { AgentTrail } from './AgentTrail.js';
 import { AgentVisFront } from './AgentVisFront.js';
+import { AgentVisBack } from './AgentVisBack.js';
+import { AgentVisLeft } from './AgentVisLeft.js';
+import { AgentVisRight } from './AgentVisRight.js';
+import { AgentVisTop } from './AgentVisTop.js';
+import { AgentVisBottom } from './AgentVisBottom.js';
 
 export class BzorCube {
 
@@ -11,6 +16,7 @@ export class BzorCube {
 	frame = 0;
 
 	agents = [];
+	agentVizs = [];
 
 	constructor() {
 	}
@@ -25,23 +31,29 @@ export class BzorCube {
 		this.faceTop = scene.getObjectByName( "faceTop", true );
 		this.faceBottom = scene.getObjectByName( "faceBottom", true );
 
-		const frontLight = new THREE.DirectionalLight( 0xffffff, 0.8 );
-		frontLight.position.set( 0, 1.0, 1.0 );
-		this.faceFront.add( frontLight );
-		const frontAmbLight = new THREE.HemisphereLight( 0xFF0000, 0x0000FF, 0.5 );
-		this.faceFront.add( frontAmbLight );
+		this.addAgent();
+		this.addAgent();
 
-		this.addAgent( 0x00FFFF );
-		this.addAgent( 0xFF00FF);
+		this.visFront = new AgentVisFront( this.faceFront, this.agents );
+		this.agentVizs.push( this.visFront );
+		this.visBack = new AgentVisBack( this.faceBack, this.agents );
+		this.agentVizs.push( this.visBack );
+		this.visLeft = new AgentVisLeft( this.faceLeft, this.agents );
+		this.agentVizs.push( this.visLeft );
+		this.visRight = new AgentVisRight( this.faceRight, this.agents );
+		this.agentVizs.push( this.visRight );
+		this.visTop = new AgentVisTop( this.faceTop, this.agents );
+		this.agentVizs.push( this.visTop );
+		this.visBottom = new AgentVisBottom( this.faceBottom, this.agents );
+		this.agentVizs.push( this.visBottom );
 
 	}
 
-	addAgent( col ) {
+	addAgent() {
 
 		const agentWander = new AgentWander( this );
 		const agentTrail = new AgentTrail( agentWander );
-		const agentVisFront = new AgentVisFront( this.faceFront, agentTrail, col );
-		const agentData = { wander: agentWander, trail: agentTrail, visFront: agentVisFront };
+		const agentData = { wander: agentWander, trail: agentTrail };
 		this.agents.push( agentData );
 
 	}
@@ -58,11 +70,14 @@ export class BzorCube {
 			let agent = this.agents[ i ];
 			agent.wander.update( this.deltaTime );
 			agent.trail.update( this.deltaTime );
-			agent.visFront.update( this.deltaTime );
-	
 
 		}
 
+		for ( let i = 0; i < this.agentVizs.length; i++ ) {
+
+			this.agentVizs[ i ].update( this.deltaTime );
+
+		}
 
 	}
 

@@ -6,7 +6,7 @@ export class AgentWander {
 	agentLookat;
 	agentMarker;
 
-	boundingSphereRadius = 0.6;
+	boundingSphereRadius = 0.4;
 	boundingForce;
 	boundingForceMult = 0.95;
 
@@ -105,7 +105,7 @@ export class AgentWander {
 		if ( distanceFromCenter > this.boundingSphereRadius ) {
 
 			//( centerPoint - agentPoint ) * ( distanceFromCenter - boundingSphereRadius )
-			this.boundingForce.copy( this.centerPoint ).sub( this.agentPoint ).multiplyScalar( ( distanceFromCenter - this.boundingSphereRadius ) * 0.3 );
+			this.boundingForce.copy( this.centerPoint ).sub( this.agentPoint ).multiplyScalar( ( distanceFromCenter - this.boundingSphereRadius ) * 0.05 );
 
 			this.agentLookat.lookAt( this.centerPoint );
 			this.wanderAngle.rotateTowards( this.agentLookat.quaternion, this.wanderAngleMaxChange * deltaTime );
