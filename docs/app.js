@@ -99,7 +99,7 @@ export const main = ({ renderer, renderTarget, camera, scene, loadingManager, gu
 
 		if( project.postprocessing && project.postprocessing.length > 0 ) {
 			postProcessing = project.postprocessing[0]; // only bloom for now.
-			postProcessing.exposure = 1.0; // not included in editor project settings but is required for the player.
+			postProcessing.exposure = 0.5; // not included in editor project settings but is required for the player.
 		}
 
 		sceneLoaded = objectLoader.parse( json.scene );
