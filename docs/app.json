@@ -35,7 +35,7 @@
 			"near": 0.01,
 			"far": 50,
 			"focus": 10,
-			"aspect": 1.9989047097480832,
+			"aspect": 1.6101344364012409,
 			"filmGauge": 35,
 			"filmOffset": 0
 		}
@@ -80,7 +80,7 @@
 				"glslVersion": null,
 				"uniforms": {},
 				"vertexShader": "\nuniform vec3 col1;\nuniform vec3 col2;\nuniform vec3 col3;\nvarying vec4 vCol;\n\nvoid main() {\n\n\tvec4 pos = vec4( position, 1.0 );\n\tvec4 worldPos = modelMatrix * pos;\n\tvec4 viewPos = viewMatrix * worldPos;\n\t\t\n\tvCol = mix( vec4( col1, 1.0 ), vec4( col2, 1.0 ), clamp( worldPos.y, -2.0, 0.0 ) + 0.5 ) ;\n\tvCol = mix( vCol, vec4( col3, 1.0 ), smoothstep( 0.0, 1.5, worldPos.y ) ) ;\n\t\n\tgl_Position = projectionMatrix * viewPos;\n\t\n}\n\n",
-				"fragmentShader": "#define PI 3.141592653589793\nvarying vec4 vCol;\n\nhighp float rand( const in vec2 uv ) {\n  const highp float a = 12.9898, b = 78.233, c = 43758.5453;\n  highp float dt = dot( uv.xy, vec2( a,b ) ), sn = mod( dt, PI );\n  return fract( sin( sn ) * c );\n}\n\nvec3 dithering( vec3 color ) {\n  float grid_position = rand( gl_FragCoord.xy );\n  vec3 dither_shift_RGB = vec3( 0.25 / 255.0, -0.25 / 255.0, 0.25 / 255.0 );\n  dither_shift_RGB = mix( 2.0 * dither_shift_RGB, -2.0 * dither_shift_RGB, grid_position );\n  return color + dither_shift_RGB;\n}\n\nvoid main() {\n\t\n\tgl_FragColor = vCol;\n\tgl_FragColor.rgb = dithering( gl_FragColor.rgb );\n\t\n}"
+				"fragmentShader": "#define PI 3.141592653589793\nvarying vec4 vCol;\n\nhighp float rand( const in vec2 uv ) {\n  const highp float a = 12.9898, b = 78.233, c = 43758.5453;\n  highp float dt = dot( uv.xy, vec2( a,b ) ), sn = mod( dt, PI );\n  return fract( sin( sn ) * c );\n}\n\nvec3 dithering( vec3 color ) {\n  float grid_position = rand( gl_FragCoord.xy );\n  vec3 dither_shift_RGB = vec3( 0.25 / 255.0, -0.25 / 255.0, 0.25 / 255.0 );\n  dither_shift_RGB = mix( 2.0 * dither_shift_RGB, -2.0 * dither_shift_RGB, grid_position );\n  return color + dither_shift_RGB;\n}\n\nvoid main() {\n\t\n\tgl_FragColor = vCol;\n\tgl_FragColor.rgb = LinearTosRGB( vec4( dithering( gl_FragColor.rgb ), 1.0 ) ).rgb;\n\t\n}"
 			}],
 		"object": {
 			"uuid": "31517222-A9A7-4EAF-B5F6-60751C0BABA3",
