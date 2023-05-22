@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>.|bzor|.</title>
+		<title>bzor-cube</title>
 		<meta charset="utf-8">
 		<meta name="generator" content="EJX Editor">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		
 		<style>
 			body {
 				font-family: sans-serif;
@@ -17,10 +16,46 @@
 				display: block;
 			}
 		</style>
-		<script type="module" crossorigin src="./assets/index-c6215b51.js"></script>
 	</head>
 	<body>
+		<!-- Import maps polyfill -->
+		<!-- Remove this when import maps will be widely supported -->
+		<script async src="./libs/es-module-shims.js"></script>
+		<script type="importmap">
+			{
+				"imports": {
+					"three": "./libs/three.module.js",
+					"three/examples/jsm/": "./libs/three/examples/jsm/"
+				}
+			}
+		</script>
+		<script type="module">
 
-		
+			import * as THREE from './libs/three.module.js';
+			import { EJPlayer } from './libs/ejx.mjs';
+
+			window.THREE = THREE; // Used by APP Scripts.
+
+			const player = new EJPlayer();
+			player.setCube( 'Plain' );
+			player.setEnvironment( 'None' );
+
+			const contentPath = './app.js';
+			import(contentPath).then(module => {
+				player.setContent({filename: contentPath, module});
+			});
+
+			const render = (timestamp, frame) => {
+				player.render();
+			}
+
+			const resize = () => {
+				player.resize();
+			}
+			
+			player.renderOverrideFunc = render.bind(this);
+			player.resizeOverrideFunc = resize.bind(this);
+
+		</script>
 	</body>
 </html>

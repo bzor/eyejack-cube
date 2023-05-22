@@ -1,0 +1,7 @@
+{
+	"type": "Cube",
+	"content": "./content/content.js",
+	"version-threejs": 151,
+	"version-editor": 1,
+	"version-template": 1
+}

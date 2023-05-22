@@ -6,9 +6,9 @@ export class AgentWander {
 	agentLookat;
 	agentMarker;
 
-	boundingSphereRadius = 0.4;
+	boundingSphereRadius = 0.5;
 	boundingForce;
-	boundingForceMult = 0.95;
+	boundingForceMult = 1;
 
 	currentPosition;
 	currentVelocity;
@@ -16,8 +16,8 @@ export class AgentWander {
 
 	//wander steering
 	wanderSphereDistance = 0.1;
-	wanderSphereRadius = 5;
-	wanderAngleMaxChange = 8;
+	wanderSphereRadius = 8;
+	wanderAngleMaxChange = 12;
 	wanderBoundsAngleMaxChange = 8;
 	wanderAngle; //quaternion
 	wanderSphereCenter;
@@ -27,10 +27,10 @@ export class AgentWander {
 	maxVelocity = 0.008;
 	maxVelocitySq;
 	//max steering force per frame
-	maxSteeringForce = 5;
+	maxSteeringForce = 8;
 
 	//trail avoid
-	trailAvoidDist = 0.25;
+	trailAvoidDist = 0.18;
 
 	//cache vectors
 	vec1 = new THREE.Vector3();
@@ -105,10 +105,10 @@ export class AgentWander {
 		if ( distanceFromCenter > this.boundingSphereRadius ) {
 
 			//( centerPoint - agentPoint ) * ( distanceFromCenter - boundingSphereRadius )
-			this.boundingForce.copy( this.centerPoint ).sub( this.agentPoint ).multiplyScalar( ( distanceFromCenter - this.boundingSphereRadius ) * 0.05 );
+			//this.boundingForce.copy( this.centerPoint ).sub( this.agentPoint ).multiplyScalar( ( distanceFromCenter - this.boundingSphereRadius ) * this.boundingForceMult );
 
 			this.agentLookat.lookAt( this.centerPoint );
-			this.wanderAngle.rotateTowards( this.agentLookat.quaternion, this.wanderAngleMaxChange * deltaTime );
+			this.wanderAngle.rotateTowards( this.agentLookat.quaternion, this.wanderBoundsAngleMaxChange * deltaTime );
 
 		} else {
 
@@ -116,7 +116,7 @@ export class AgentWander {
 
 		}
 		//dampen bounding force
-		this.boundingForce.multiplyScalar( this.boundingForceMult );
+		//this.boundingForce.multiplyScalar( this.boundingForceDamp );
 
 		//attract each other
 		this.trailAvoidForce.setScalar( 0 );
@@ -129,7 +129,7 @@ export class AgentWander {
 
 			}
 			this.vec1.copy( agent.wander.agentPoint );
-			let attactMult = 2.5;
+			let attactMult = 3;
 			this.vec1.copy( agent.wander.agentPoint ).sub( this.agentPoint ).normalize().multiplyScalar( attactMult );
 			this.trailAvoidForce.add( this.vec1 );
 

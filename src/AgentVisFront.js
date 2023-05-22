@@ -7,7 +7,7 @@ export class AgentVisFront {
 
 	elemScale = 0.01;
 
-	numSpineInstances = 2048;
+	numSpineInstances = 1024;
 
 	visAgents = [];
 	cols = [ 0xFF00FF, 0x00FFFF ];
