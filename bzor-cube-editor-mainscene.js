@@ -28,8 +28,6 @@ function init() {
 	agents.push( agentData2 );
 
 	agentVizs.push( vis1( this.getObjectByName( "faceFront" ) ) );
-	agentVizs.push( vis2( this.getObjectByName( "faceLeft" ) ) );
-	agentVizs.push( vis3( this.getObjectByName( "faceTop" ) ) );
 	
 	dust = createDust();
 	this.getObjectByName( "faceFront" ).add( dust.mesh );
