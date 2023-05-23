@@ -16,8 +16,18 @@ wanderSettings.dustAvoidDist = 0.04;
 const agents = [];
 const agentVizs = [];
 
-const numDust = 4096;
 let dust;
+const numDust = 4096;
+
+let faceFront;
+let faceFrontEnv;
+const frontPos = new THREE.Vector3();
+const frontDir = new THREE.Vector3();
+let faceLeft;
+let faceLeftEnv;
+const leftPos = new THREE.Vector3();
+const leftDir = new THREE.Vector3();
+let faceTop;
 
 function init() {
 
@@ -27,10 +37,24 @@ function init() {
 	let agentData2 = { wander: createWander(this), id: 1 };
 	agents.push(agentData2);
 
-	agentVizs.push(vis1(this.getObjectByName("faceFront")));
+	faceFront = this.getObjectByName("faceFront");
+	faceFrontEnv = faceFront.getObjectByName("frontBackEnv");
+	faceFrontEnv.getWorldPosition(frontPos);
+	faceFrontEnv.getWorldDirection(frontDir);
+	faceLeft = this.getObjectByName("faceLeft");
+	faceLeftEnv = faceLeft.getObjectByName("leftRightEnv");
+	faceLeftEnv.getWorldPosition(leftPos);
+	faceLeftEnv.getWorldDirection(leftDir);
+	faceTop = this.getObjectByName("faceTop");
+
+	agentVizs.push(vis1(faceFront));
+	agentVizs.push(vis2(faceLeft));
+	agentVizs.push(vis3(faceTop));
 
 	dust = createDust();
-	this.getObjectByName("faceFront").add(dust.mesh);
+	faceFront.add(dust.meshFront);
+	faceLeft.add(dust.meshLeft);
+	faceTop.add(dust.meshTop);
 
 }
 
@@ -38,6 +62,11 @@ function update(event) {
 
 	const deltaTime = event.delta * 0.001;
 	const time = event.time;
+
+	faceFrontEnv.getWorldPosition(frontPos);
+	faceFrontEnv.getWorldDirection(frontDir);
+	faceLeftEnv.getWorldPosition(leftPos);
+	faceLeftEnv.getWorldDirection(leftDir);
 
 	for (let i = 0; i < agents.length; i++) {
 
@@ -54,6 +83,10 @@ function update(event) {
 	updateDust(deltaTime);
 
 }
+
+//
+//agents
+//
 
 function updateAgent(agentData, deltaTime) {
 
@@ -194,39 +227,6 @@ function createWander(scene) {
 //
 //dust
 //
-/*
-const dustVert = `
-
-uniform vec3 col;
-uniform float pixelRatio;
-varying vec3 vCol;
-
-void main() {
-
-	vec4 vPos = vec4( position, 1.0 );
-	vec4 worldPos = modelMatrix * vPos;
-	vec4 viewPos = viewMatrix * worldPos;
-	
-	vCol = col;
-	gl_PointSize = ( 300.0 / -viewPos.z ) * 0.024 * pixelRatio;
-	gl_Position = projectionMatrix * viewPos;
-
-}
-`;
-
-const dustFrag = `
-
-uniform float uTime;
-varying vec3 vCol;
-
-void main() {
-
-	if ( length( gl_PointCoord - vec2( 0.5, 0.5 ) ) > 0.475 ) discard;
-	gl_FragColor = sRGBToLinear( vec4( vCol, 1.0 ) );
-
-}
-`;
-*/
 
 const dustVert = `
 
@@ -277,22 +277,22 @@ function createDust() {
 
 	}
 
-	const mat = new THREE.ShaderMaterial({ uniforms: { col: { value: new THREE.Color(0x282037) }, pixelRatio: { value: window.devicePixelRatio } }, vertexShader: dustVert, fragmentShader: dustFrag });
-	//mat.depthTest = false;
-	//mat.depthWrite = false;
+	const mat = new THREE.ShaderMaterial({ uniforms: { col: { value: new THREE.Color(0x111133 }, pixelRatio: { value: window.devicePixelRatio } }, vertexShader: dustVert, fragmentShader: dustFrag });
 	mat.blending = THREE.AdditiveBlending;
 
-	//const dustGeo = new THREE.IcosahedronGeometry( 0.005, 0 );
 	const dustGeo = new THREE.CircleGeometry(0.0025, 6);
-	const dustMesh = new THREE.InstancedMesh(dustGeo, mat, numDust);
 
 	const pointBuffer = new THREE.InstancedBufferAttribute(points, 3);
-	//pointBuffer.setUsage( THREE.StreamDrawUsage );
+	pointBuffer.setUsage(THREE.StreamDrawUsage);
 	dustGeo.setAttribute('iPos', pointBuffer);
 
-	//const dustPoints = new THREE.Points( geo, mat );
-	//dust.points = dustPoints;
-	dust.mesh = dustMesh;
+	const dustMeshFront = new THREE.InstancedMesh(dustGeo, mat, numDust);
+	const dustMeshLeft = new THREE.InstancedMesh(dustGeo, mat, numDust);
+	const dustMeshTop = new THREE.InstancedMesh(dustGeo, mat, numDust);
+
+	dust.meshFront = dustMeshFront;
+	dust.meshLeft = dustMeshLeft;
+	dust.meshTop = dustMeshTop;
 	dust.geo = dustGeo;
 	dust.mat = mat;
 	dust.velocities = velocities;
@@ -388,7 +388,11 @@ function updateDust(deltaTime) {
 const vis1SpikeVert = `
 
 uniform vec3 col1;
+uniform vec3 col2_1;
+uniform vec3 col2_2;
 varying vec3 vCol;
+uniform vec3 groupPos;
+uniform vec3 groupDir;
 
 void main() {
 
@@ -396,10 +400,16 @@ void main() {
     vec4 iPos = instanceMatrix * vPos;
     vec4 worldPos = modelMatrix * iPos;
     vec4 viewPos = viewMatrix * worldPos;
+
+	float dir = dot ( cameraPosition - groupPos, groupDir );
+	float dirT = smoothstep( -0.01, 0.01, dir );
+
+	vec3 vCol1 = col1;
+	vec3 vCol2 = mix( col2_1, col2_2, smoothstep( -0.1, 0.1, iPos.y ) );
 	
-	float fade = 0.7;
-	//vCol = mix( col2 * fade, col1 * fade, smoothstep( -0.8, 1.2, worldPos.z ) );
-	vCol = col1 * smoothstep( 0.05, 0.09, vPos.y );
+	vCol = mix( vCol1, vCol2, dirT ) * smoothstep( 0.05, 0.09, vPos.y );
+	
+	
     gl_Position = projectionMatrix * viewPos;
 
 }
@@ -477,7 +487,8 @@ function vis1(faceGroup) {
 	vis.numBodyInstances = 512;
 	vis.numSpineLoops = 323;
 	vis.visAgents = [];
-	vis.cols = [0xdf4266, 0xd246d8];
+	vis.cols1 = [0xdf4266, 0xd246d8];
+	vis.cols2 = [0x44bfd9, 0xd743cb];
 	vis.bodyCols = [0x43adc8, 0xc84f43];
 
 	vis.pos = new THREE.Vector3();
@@ -504,13 +515,19 @@ function vis1(faceGroup) {
 		geo.translate(0, vis.spineElemH * 0.5 + 0.05, 0);
 
 		const spikeUniforms = {
-			"col1": { value: new THREE.Color(vis.cols[i]) },
+			"col1": { value: new THREE.Color(vis.cols1[i]) },
+			"col2_1": { value: new THREE.Color(vis.cols2[i]) },
+			"col2_2": { value: new THREE.Color(vis.cols2[1 - i]) },
+			"groupPos": { value: frontPos },
+			"groupDir": { value: frontDir }
+
+
 		};
-		const mat = new THREE.ShaderMaterial({ uniforms: spikeUniforms, vertexShader: vis1SpikeVert, fragmentShader: vis1SpikeFrag });
-		mat.blending = THREE.AdditiveBlending;
+		const spikeMat = new THREE.ShaderMaterial({ uniforms: spikeUniforms, vertexShader: vis1SpikeVert, fragmentShader: vis1SpikeFrag });
+		//mat.blending = THREE.AdditiveBlending;
 		//const mat = new THREE.MeshBasicMaterial( { color: vis.cols[ i ] } );
 
-		const spikeMesh = new THREE.InstancedMesh(geo, mat, vis.numSpineInstances);
+		const spikeMesh = new THREE.InstancedMesh(geo, spikeMat, vis.numSpineInstances);
 		spikeMesh.instanceMatrix.setUsage(THREE.StreamDrawUsage);
 		faceGroup.add(spikeMesh);
 
@@ -527,7 +544,7 @@ function vis1(faceGroup) {
 		const bodyMesh = new THREE.InstancedMesh(bodyGeo, bodyMat, vis.numBodyInstances);
 		faceGroup.add(bodyMesh);
 
-		const agentData = { agent: agents[i], spikeMesh: spikeMesh, bodyMesh: bodyMesh, bodyUniforms: bodyUniforms, spikeData: [] };
+		const agentData = { agent: agents[i], spikeMesh: spikeMesh, bodyMesh: bodyMesh, spikeUniforms: spikeUniforms, bodyUniforms: bodyUniforms, spikeData: [] };
 
 		for (let i = 0; i < vis.numSpineInstances; i++) {
 
@@ -576,6 +593,324 @@ function vis1(faceGroup) {
 			visAgent = this.visAgents[j];
 			visAgentWander = visAgent.agent.wander;
 			visAgent.bodyUniforms.uTime.value = this.tick;
+			visAgent.spikeUniforms.groupPos.value = frontPos;
+			visAgent.spikeUniforms.groupDir.value = frontDir;
+
+			for (let i = 0; i < this.numSpineInstances; i++) {
+
+				let t = i / this.numSpineInstances;
+				let segmentI = Math.floor(t * visAgentWander.numTrailSegments);
+				let segmentT = t * visAgentWander.numTrailSegments - Math.floor(t * visAgentWander.numTrailSegments);
+				let spikeData = visAgent.spikeData[i];
+
+				if (segmentI < visAgentWander.numTrailSegments - 1) {
+
+					this.pos.copy(visAgentWander.trailSegments[segmentI]).lerp(visAgentWander.trailSegments[segmentI + 1], segmentT);
+
+				} else {
+
+					this.pos.copy(visAgentWander.trailSegments[segmentI]);
+
+				}
+
+
+				if (segmentI == 0) {
+
+					this.vec2.copy(this.pos);
+					this.vec2.add(this.vec1.copy(visAgentWander.trailSegments[0]).sub(visAgentWander.trailSegments[1]).normalize());
+
+				} else {
+
+					this.vec2.copy(this.pos);
+					this.vec2.add(this.vec1.copy(visAgentWander.trailSegments[segmentI - 1]).sub(visAgentWander.trailSegments[segmentI]).normalize());
+
+				}
+
+				this.matRot4.lookAt(this.pos, this.vec2, this.up);
+				this.q1.setFromRotationMatrix(this.matRot4);
+
+				this.q2.setFromAxisAngle(this.forward, t * Math.PI * 2 * this.numSpineLoops + this.tick * 1.0);
+				this.q1.multiply(this.q2);
+
+				spikeData.q.slerp(this.q1, deltaTime * 2.0);
+
+				let scXY = THREE.MathUtils.smoothstep(t, 0, 0.1) * (1.0 - THREE.MathUtils.smoothstep(t, 0.9, 1.0)) * 1.0;
+				let sc = Math.max(scXY + Math.sin(t * Math.PI * 2 * 30.0 + this.tick * -3.0) * (scXY * 0.9), 0.3);
+				sc = scXY;
+				this.scale.setScalar(sc);
+
+				let rndMult = Math.max(scXY + Math.sin(t * Math.PI * 4) * 0.4 + Math.sin(t * Math.PI * 5 - this.tick * 4.0) * 0.4, 0.1);
+
+				this.mat4.compose(this.pos, spikeData.q, this.scale);
+
+				visAgent.spikeMesh.setMatrixAt(i, this.mat4);
+
+			}
+
+
+			let bodyDirs = visAgent.bodyMesh.geometry.getAttribute("dir");
+			let bodyIPos = visAgent.bodyMesh.geometry.getAttribute("iPos");
+
+			for (let i = 0; i < this.numBodyInstances; i++) {
+
+				let t = i / this.numBodyInstances;
+				let segmentI = Math.floor(t * visAgentWander.numTrailSegments);
+				let segmentT = t * visAgentWander.numTrailSegments - Math.floor(t * visAgentWander.numTrailSegments);
+
+				if (segmentI < visAgentWander.numTrailSegments - 1) {
+
+					this.pos.copy(visAgentWander.trailSegments[segmentI]).lerp(visAgentWander.trailSegments[segmentI + 1], segmentT);
+
+				} else {
+
+					this.pos.copy(visAgentWander.trailSegments[segmentI]);
+
+				}
+
+
+				if (segmentI == 0) {
+
+					this.vec2.copy(this.pos);
+					this.vec2.add(this.vec1.copy(visAgentWander.trailSegments[0]).sub(visAgentWander.trailSegments[1]).normalize());
+
+				} else {
+
+					this.vec2.copy(this.pos);
+					this.vec2.add(this.vec1.copy(visAgentWander.trailSegments[segmentI - 1]).sub(visAgentWander.trailSegments[segmentI]).normalize());
+
+				}
+
+				bodyDirs.setXYZ(i, this.vec2.x, this.vec2.y, this.vec2.z);
+				bodyIPos.setXYZ(i, this.pos.x, this.pos.y, this.pos.z);
+
+			}
+
+			visAgent.spikeMesh.instanceMatrix.needsUpdate = true;
+			bodyDirs.needsUpdate = true;
+			bodyIPos.needsUpdate = true;
+
+		}
+
+	}
+
+	return vis;
+
+}
+
+//
+//vis2 - left/right
+//
+
+const vis2SpikeVert = `
+
+uniform vec3 col1;
+uniform vec3 col2_1;
+uniform vec3 col2_2;
+varying vec3 vCol;
+uniform vec3 groupPos;
+uniform vec3 groupDir;
+
+void main() {
+
+	vec4 vPos = vec4( position, 1.0 );
+    vec4 iPos = instanceMatrix * vPos;
+    vec4 worldPos = modelMatrix * iPos;
+    vec4 viewPos = viewMatrix * worldPos;
+
+	float dir = dot ( cameraPosition - groupPos, groupDir );
+	float dirT = smoothstep( -0.01, 0.01, dir );
+
+	vec3 vCol1 = col1;
+	vec3 vCol2 = mix( col2_1, col2_2, smoothstep( -0.2, 0.2, iPos.y ) );
+	
+	vCol = mix( vCol1, vCol2, dirT ) * smoothstep( 0.05, 0.09, vPos.y );
+	
+	
+    gl_Position = projectionMatrix * viewPos;
+
+}
+`;
+
+const vis2SpikeFrag = `
+
+uniform float uTime;
+varying vec3 vCol;
+
+void main() {
+
+    gl_FragColor = vec4( vCol, 1.0 );
+
+}
+`;
+
+const vis2BodyVert = `
+
+#define PI 3.141592653589793
+attribute vec3 iPos;
+attribute vec3 rndPos;
+attribute vec3 dir;
+attribute float t;
+uniform vec3 col1;
+uniform vec3 col2;
+uniform float uTime;
+varying vec3 vCol;
+
+void main() {
+	
+	float scXY = smoothstep( 0.0, 0.1, t ) * ( 1.0 - smoothstep( 0.9, 1.0, t ) ) * 0.2;
+	float sc = max( scXY + sin( t * PI * 2.0 * 30.0 + uTime * -3.0 ) * scXY, 0.3 );
+	float rndMult = max ( scXY + sin( t * PI * 4.0 ) * 0.4 + sin( t * PI * 5.0 - uTime * 4.0 ) * 0.4, 0.1 );
+
+	vec3 pos = position;
+	pos *= sc;
+
+	vec3 vPos = pos + rndPos * rndMult;
+
+	vec4 mvPos = modelViewMatrix * vec4( iPos, 1.0 );
+	mvPos.xyz += vPos;
+	gl_Position = projectionMatrix * mvPos;
+	
+	vec3 worldPos = ( modelMatrix * vec4( iPos, 1.0 ) ).xyz;
+	vCol = mix( col1, col2, smoothstep( -0.5, 0.5, dot( cameraPosition - worldPos, dir ) ) );
+
+}
+`;
+
+const vis2BodyFrag = `
+
+uniform float uTime;
+
+varying vec3 vCol;
+
+void main() {
+
+    gl_FragColor = vec4( vCol, 1.0 );
+
+}
+`;
+
+
+
+function vis2(faceGroup) {
+
+	//vis
+	const vis = {};
+
+	vis.spineElemR = 0.01;
+	vis.spineElemH = 0.04;
+	vis.bodyElemScale = 0.02;
+	vis.numSpineInstances = 1024;
+	vis.numBodyInstances = 512;
+	vis.numSpineLoops = 323;
+	vis.visAgents = [];
+	vis.cols1 = [0x39998f, 0x6c43b3];
+	vis.cols2 = [0xff4c4c, 0x45e6af];
+	vis.bodyCols = [0xc84f43, 0xc84f43];
+
+	vis.pos = new THREE.Vector3();
+	vis.vec1 = new THREE.Vector3();
+	vis.vec2 = new THREE.Vector3();
+	vis.vec3 = new THREE.Vector3();
+	vis.mat3 = new THREE.Matrix3();
+	vis.mat4 = new THREE.Matrix4();
+	vis.matRot4 = new THREE.Matrix4();
+	vis.q1 = new THREE.Quaternion();
+	vis.q2 = new THREE.Quaternion();
+	vis.q3 = new THREE.Quaternion();
+	vis.scale = new THREE.Vector3();
+	vis.forward = new THREE.Vector3(0, 0, 1.0);
+	vis.up = new THREE.Vector3(0, 1.0, 0);
+
+	vis.tick = 0;
+
+	vis.faceGroup = faceGroup;
+
+	for (let i = 0; i < agents.length; i++) {
+
+		const geo = new THREE.ConeGeometry(vis.spineElemR, vis.spineElemH, 5, 1);
+		geo.translate(0, vis.spineElemH * 0.5 + 0.05, 0);
+
+		const spikeUniforms = {
+			"col1": { value: new THREE.Color(vis.cols1[i]) },
+			"col2_1": { value: new THREE.Color(vis.cols2[i]) },
+			"col2_2": { value: new THREE.Color(vis.cols2[1 - i]) },
+			"groupPos": { value: frontPos },
+			"groupDir": { value: frontDir }
+
+
+		};
+		const spikeMat = new THREE.ShaderMaterial({ uniforms: spikeUniforms, vertexShader: vis2SpikeVert, fragmentShader: vis2SpikeFrag });
+		//mat.blending = THREE.AdditiveBlending;
+		//const mat = new THREE.MeshBasicMaterial( { color: vis.cols[ i ] } );
+
+		const spikeMesh = new THREE.InstancedMesh(geo, spikeMat, vis.numSpineInstances);
+		spikeMesh.instanceMatrix.setUsage(THREE.StreamDrawUsage);
+		faceGroup.add(spikeMesh);
+
+		const bodyUniforms = {
+			"col1": { value: new THREE.Color(vis.bodyCols[i]) },
+			"col2": { value: new THREE.Color(vis.bodyCols[1 - i]) },
+			"uTime": { value: 0 }
+		};
+		const bodyMat = new THREE.ShaderMaterial({ uniforms: bodyUniforms, vertexShader: vis2BodyVert, fragmentShader: vis2BodyFrag });
+		bodyMat.blending = THREE.AdditiveBlending;
+
+		//const bodyGeo = new THREE.IcosahedronGeometry( vis.bodyElemScale, 0 );
+		const bodyGeo = new THREE.CircleGeometry(vis.bodyElemScale, 8);
+		const bodyMesh = new THREE.InstancedMesh(bodyGeo, bodyMat, vis.numBodyInstances);
+		faceGroup.add(bodyMesh);
+
+		const agentData = { agent: agents[i], spikeMesh: spikeMesh, bodyMesh: bodyMesh, spikeUniforms: spikeUniforms, bodyUniforms: bodyUniforms, spikeData: [] };
+
+		for (let i = 0; i < vis.numSpineInstances; i++) {
+
+			agentData.spikeData.push({ q: new THREE.Quaternion() });
+
+		}
+
+		const bodyDirs = new Float32Array(vis.numBodyInstances * 3);
+		const bodyIPos = new Float32Array(vis.numBodyInstances * 3);
+		const bodyRndPos = new Float32Array(vis.numBodyInstances * 3);
+		const bodyT = new Float32Array(vis.numBodyInstances);
+		for (let i = 0; i < vis.numBodyInstances; i++) {
+
+			let rnd = new THREE.Vector3().randomDirection().multiplyScalar(0.05);
+			bodyRndPos[i * 3] = rnd.x;
+			bodyRndPos[i * 3 + 1] = rnd.y;
+			bodyRndPos[i * 3 + 2] = rnd.z;
+			bodyDirs[i * 3] = 0;
+			bodyDirs[i * 3 + 1] = 0;
+			bodyDirs[i * 3 + 2] = 0;
+
+			bodyT[i] = i / (vis.numBodyInstances - 1);
+
+		}
+
+		const bodyIposBuffer = new THREE.InstancedBufferAttribute(bodyIPos, 3);
+		bodyIposBuffer.setUsage(THREE.StreamDrawUsage);
+		bodyGeo.setAttribute('iPos', bodyIposBuffer);
+		const bodyDirsBuffer = new THREE.InstancedBufferAttribute(bodyDirs, 3);
+		bodyDirsBuffer.setUsage(THREE.StreamDrawUsage);
+		bodyGeo.setAttribute('dir', bodyDirsBuffer);
+		bodyGeo.setAttribute('rndPos', new THREE.InstancedBufferAttribute(bodyRndPos, 3));
+		bodyGeo.setAttribute('t', new THREE.InstancedBufferAttribute(bodyT, 1));
+
+		vis.visAgents.push(agentData);
+
+	}
+
+	vis.update = function (deltaTime, time) {
+
+		this.tick += deltaTime;
+
+		let visAgent, visAgentWander;
+		for (let j = 0; j < vis.visAgents.length; j++) {
+
+			visAgent = this.visAgents[j];
+			visAgentWander = visAgent.agent.wander;
+			visAgent.bodyUniforms.uTime.value = this.tick;
+			visAgent.spikeUniforms.groupPos.value = leftPos;
+			visAgent.spikeUniforms.groupDir.value = leftDir;
 
 			for (let i = 0; i < this.numSpineInstances; i++) {
 
@@ -679,29 +1014,82 @@ function vis1(faceGroup) {
 }
 
 
+
 //
-//vis2 - left/right
+//vis3 - top/bottom
 //
 
-const vis2SpikeVert = `
+const vis3SpikeVert = `
 
 uniform vec3 col1;
-uniform vec3 col2;
+uniform vec3 col2_1;
+uniform vec3 col2_2;
 varying vec3 vCol;
+uniform vec3 groupPos;
+uniform vec3 groupDir;
 
 void main() {
 
-    vec3 pos = ( instanceMatrix * vec4( position, 1.0 ) ).xyz;
-    vec3 worldPos = ( modelMatrix * vec4( pos, 1.0 ) ).xyz;
-    vec4 mvPosition = viewMatrix * vec4( worldPos, 1.0 );
+	vec4 vPos = vec4( position, 1.0 );
+    vec4 iPos = instanceMatrix * vPos;
+    vec4 worldPos = modelMatrix * iPos;
+    vec4 viewPos = viewMatrix * worldPos;
+
+	vec3 vCol1 = col1;
 	
-	vCol = mix( col2, col1, smoothstep( -0.8, 1.2, worldPos.z ) );
-    gl_Position = projectionMatrix * mvPosition;
+	vCol = vCol1;	
+	
+    gl_Position = projectionMatrix * viewPos;
 
 }
 `;
 
-const vis2SpikeFrag = `
+const vis3SpikeFrag = `
+
+uniform float uTime;
+varying vec3 vCol;
+
+void main() {
+
+    gl_FragColor = vec4( vCol, 1.0 );
+
+}
+`;
+
+const vis3BodyVert = `
+
+#define PI 3.141592653589793
+attribute vec3 iPos;
+attribute vec3 rndPos;
+attribute vec3 dir;
+attribute float t;
+uniform vec3 col1;
+uniform vec3 col2;
+uniform float uTime;
+varying vec3 vCol;
+
+void main() {
+	
+	float scXY = smoothstep( 0.0, 0.1, t ) * ( 1.0 - smoothstep( 0.9, 1.0, t ) ) * 0.2;
+	float sc = max( scXY + sin( t * PI * 2.0 * 30.0 + uTime * -3.0 ) * scXY, 0.3 );
+	float rndMult = max ( scXY + sin( t * PI * 4.0 ) * 0.4 + sin( t * PI * 5.0 - uTime * 4.0 ) * 0.4, 0.1 );
+
+	vec3 pos = position;
+	pos *= sc;
+
+	vec3 vPos = pos + rndPos * rndMult;
+
+	vec4 mvPos = modelViewMatrix * vec4( iPos, 1.0 );
+	mvPos.xyz += vPos;
+	gl_Position = projectionMatrix * mvPos;
+	
+	vec3 worldPos = ( modelMatrix * vec4( iPos, 1.0 ) ).xyz;
+	vCol = mix( col1, col2, smoothstep( -0.5, 0.5, dot( cameraPosition - worldPos, dir ) ) );
+
+}
+`;
+
+const vis3BodyFrag = `
 
 uniform float uTime;
 
@@ -715,24 +1103,22 @@ void main() {
 `;
 
 
-function vis2(faceGroup) {
 
-	//front lighting
-	const frontLight = new THREE.DirectionalLight(0xffffff, 0.8);
-	frontLight.position.set(0, 1.0, 1.0);
-	faceGroup.add(frontLight);
-	const frontAmbLight = new THREE.HemisphereLight(0xFF0000, 0x0000FF, 0.5);
-	faceGroup.add(frontAmbLight);
+function vis3(faceGroup) {
 
 	//vis
 	const vis = {};
 
-	vis.elemScale = 0.04;
-	vis.bodyElemScale = 0.01;
-	vis.numSpineInstances = 512;
-
+	vis.spineElemR = 0.01;
+	vis.spineElemH = 0.04;
+	vis.bodyElemScale = 0.02;
+	vis.numSpineInstances = 1024;
+	vis.numBodyInstances = 512;
+	vis.numSpineLoops = 323;
 	vis.visAgents = [];
-	vis.cols = [0xFF00FF, 0x00FFFF];
+	vis.cols1 = [0x000000, 0x222222];
+	vis.cols2 = [0x222222, 0x000000];
+	vis.bodyCols = [0xFFFFFF, 0xFFFFFF];
 
 	vis.pos = new THREE.Vector3();
 	vis.vec1 = new THREE.Vector3();
@@ -743,6 +1129,7 @@ function vis2(faceGroup) {
 	vis.matRot4 = new THREE.Matrix4();
 	vis.q1 = new THREE.Quaternion();
 	vis.q2 = new THREE.Quaternion();
+	vis.q3 = new THREE.Quaternion();
 	vis.scale = new THREE.Vector3();
 	vis.forward = new THREE.Vector3(0, 0, 1.0);
 	vis.up = new THREE.Vector3(0, 1.0, 0);
@@ -753,26 +1140,73 @@ function vis2(faceGroup) {
 
 	for (let i = 0; i < agents.length; i++) {
 
-		const geo = new THREE.ConeGeometry(vis.elemScale, vis.elemScale * 2.0, 3, 1);
-		geo.translate(0, vis.elemScale * 2.0, 0);
+		const geo = new THREE.ConeGeometry(vis.spineElemR, vis.spineElemH, 5, 1);
+		geo.translate(0, vis.spineElemH * 0.5 + 0.05, 0);
 
 		const spikeUniforms = {
-			"col1": { value: new THREE.Color(vis.cols[i]) },
-			"col2": { value: new THREE.Color(0x000000) },
+			"col1": { value: new THREE.Color(vis.cols1[i]) },
+			"col2_1": { value: new THREE.Color(vis.cols2[i]) },
+			"col2_2": { value: new THREE.Color(vis.cols2[1 - i]) },
+			"groupPos": { value: frontPos },
+			"groupDir": { value: frontDir }
+
+
 		};
-		const mat = new THREE.ShaderMaterial({ uniforms: spikeUniforms, vertexShader: vis2SpikeVert, fragmentShader: vis2SpikeFrag });
+		const spikeMat = new THREE.ShaderMaterial({ uniforms: spikeUniforms, vertexShader: vis3SpikeVert, fragmentShader: vis3SpikeFrag });
+		//mat.blending = THREE.AdditiveBlending;
 		//const mat = new THREE.MeshBasicMaterial( { color: vis.cols[ i ] } );
 
-		const visMesh = new THREE.InstancedMesh(geo, mat, vis.numSpineInstances);
-		visMesh.instanceMatrix.setUsage(THREE.StreamDrawUsage);
-		faceGroup.add(visMesh);
+		const spikeMesh = new THREE.InstancedMesh(geo, spikeMat, vis.numSpineInstances);
+		spikeMesh.instanceMatrix.setUsage(THREE.StreamDrawUsage);
+		faceGroup.add(spikeMesh);
 
-		const agentData = { agent: agents[i], mesh: visMesh, elemData: [] };
+		const bodyUniforms = {
+			"col1": { value: new THREE.Color(vis.bodyCols[i]) },
+			"col2": { value: new THREE.Color(vis.bodyCols[1 - i]) },
+			"uTime": { value: 0 }
+		};
+		const bodyMat = new THREE.ShaderMaterial({ uniforms: bodyUniforms, vertexShader: vis3BodyVert, fragmentShader: vis3BodyFrag });
+		bodyMat.blending = THREE.AdditiveBlending;
+
+		//const bodyGeo = new THREE.IcosahedronGeometry( vis.bodyElemScale, 0 );
+		const bodyGeo = new THREE.CircleGeometry(vis.bodyElemScale, 8);
+		const bodyMesh = new THREE.InstancedMesh(bodyGeo, bodyMat, vis.numBodyInstances);
+		faceGroup.add(bodyMesh);
+
+		const agentData = { agent: agents[i], spikeMesh: spikeMesh, bodyMesh: bodyMesh, spikeUniforms: spikeUniforms, bodyUniforms: bodyUniforms, spikeData: [] };
+
 		for (let i = 0; i < vis.numSpineInstances; i++) {
 
-			agentData.elemData.push({ rnd: new THREE.Vector3().randomDirection().multiplyScalar(0.05), q: new THREE.Quaternion() });
+			agentData.spikeData.push({ q: new THREE.Quaternion() });
 
 		}
+
+		const bodyDirs = new Float32Array(vis.numBodyInstances * 3);
+		const bodyIPos = new Float32Array(vis.numBodyInstances * 3);
+		const bodyRndPos = new Float32Array(vis.numBodyInstances * 3);
+		const bodyT = new Float32Array(vis.numBodyInstances);
+		for (let i = 0; i < vis.numBodyInstances; i++) {
+
+			let rnd = new THREE.Vector3().randomDirection().multiplyScalar(0.05);
+			bodyRndPos[i * 3] = rnd.x;
+			bodyRndPos[i * 3 + 1] = rnd.y;
+			bodyRndPos[i * 3 + 2] = rnd.z;
+			bodyDirs[i * 3] = 0;
+			bodyDirs[i * 3 + 1] = 0;
+			bodyDirs[i * 3 + 2] = 0;
+
+			bodyT[i] = i / (vis.numBodyInstances - 1);
+
+		}
+
+		const bodyIposBuffer = new THREE.InstancedBufferAttribute(bodyIPos, 3);
+		bodyIposBuffer.setUsage(THREE.StreamDrawUsage);
+		bodyGeo.setAttribute('iPos', bodyIposBuffer);
+		const bodyDirsBuffer = new THREE.InstancedBufferAttribute(bodyDirs, 3);
+		bodyDirsBuffer.setUsage(THREE.StreamDrawUsage);
+		bodyGeo.setAttribute('dir', bodyDirsBuffer);
+		bodyGeo.setAttribute('rndPos', new THREE.InstancedBufferAttribute(bodyRndPos, 3));
+		bodyGeo.setAttribute('t', new THREE.InstancedBufferAttribute(bodyT, 1));
 
 		vis.visAgents.push(agentData);
 
@@ -787,13 +1221,16 @@ function vis2(faceGroup) {
 
 			visAgent = this.visAgents[j];
 			visAgentWander = visAgent.agent.wander;
+			visAgent.bodyUniforms.uTime.value = this.tick;
+			visAgent.spikeUniforms.groupPos.value = leftPos;
+			visAgent.spikeUniforms.groupDir.value = leftDir;
 
 			for (let i = 0; i < this.numSpineInstances; i++) {
 
 				let t = i / this.numSpineInstances;
 				let segmentI = Math.floor(t * visAgentWander.numTrailSegments);
 				let segmentT = t * visAgentWander.numTrailSegments - Math.floor(t * visAgentWander.numTrailSegments);
-				let data = visAgent.elemData[i];
+				let spikeData = visAgent.spikeData[i];
 
 				if (segmentI < visAgentWander.numTrailSegments - 1) {
 
@@ -821,10 +1258,10 @@ function vis2(faceGroup) {
 				this.matRot4.lookAt(this.pos, this.vec2, this.up);
 				this.q1.setFromRotationMatrix(this.matRot4);
 
-				this.q2.setFromAxisAngle(this.forward, t * Math.PI * 2 * 4 + this.tick * 5.0);
+				this.q2.setFromAxisAngle(this.forward, t * Math.PI * 2 * this.numSpineLoops + this.tick * 1.0);
 				this.q1.multiply(this.q2);
 
-				data.q.slerp(this.q1, deltaTime * 2.0);
+				spikeData.q.slerp(this.q1, deltaTime * 2.0);
 
 				let scXY = THREE.MathUtils.smoothstep(t, 0, 0.1) * (1.0 - THREE.MathUtils.smoothstep(t, 0.9, 1.0)) * 1.0;
 				let sc = Math.max(scXY + Math.sin(t * Math.PI * 2 * 30.0 + this.tick * -3.0) * (scXY * 0.9), 0.3);
@@ -832,328 +1269,60 @@ function vis2(faceGroup) {
 				this.scale.setScalar(sc);
 
 				let rndMult = Math.max(scXY + Math.sin(t * Math.PI * 4) * 0.4 + Math.sin(t * Math.PI * 5 - this.tick * 4.0) * 0.4, 0.1);
-				//this.vec3.copy( data.rnd ).multiplyScalar( rndMult );
-				//this.pos.add( this.vec3 );
 
-				this.mat4.compose(this.pos, data.q, this.scale);
+				this.mat4.compose(this.pos, spikeData.q, this.scale);
 
-				visAgent.mesh.setMatrixAt(i, this.mat4);
+				visAgent.spikeMesh.setMatrixAt(i, this.mat4);
 
 			}
 
-			visAgent.mesh.instanceMatrix.needsUpdate = true;
 
-		}
+			let bodyDirs = visAgent.bodyMesh.geometry.getAttribute("dir");
+			let bodyIPos = visAgent.bodyMesh.geometry.getAttribute("iPos");
 
-	}
-
-	return vis;
-
-}
-
-
-
-
-//
-//vis3 - top/bottom
-//
-
-const vis3SpikeVert = `
-
-uniform vec3 col1;
-uniform vec3 col2;
-varying vec3 vCol;
-
-void main() {
-
-    vec3 pos = ( instanceMatrix * vec4( position, 1.0 ) ).xyz;
-    vec3 worldPos = ( modelMatrix * vec4( pos, 1.0 ) ).xyz;
-    vec4 mvPosition = viewMatrix * vec4( worldPos, 1.0 );
-	
-	vCol = mix( col2, col1, smoothstep( -0.8, 1.2, worldPos.z ) );
-    gl_Position = projectionMatrix * mvPosition;
-
-}
-`;
-
-const vis3SpikeFrag = `
-
-uniform float uTime;
-
-varying vec3 vCol;
-
-void main() {
-
-    gl_FragColor = vec4( vCol, 1.0 );
-
-}
-`;
-
-
-function vis3(faceGroup) {
-
-	//vis
-	const vis = {};
-
-	vis.cubeW = 1.0;
-
-	vis.numConnections = 256;
-
-	vis.visAgents = [];
-	vis.cols = [0xff4949, 0x70ffb0];
-
-	vis.pos = new THREE.Vector3();
-	vis.vec1 = new THREE.Vector3();
-	vis.vec2 = new THREE.Vector3();
-	vis.vec3 = new THREE.Vector3();
-	vis.mat3 = new THREE.Matrix3();
-	vis.mat4 = new THREE.Matrix4();
-	vis.matRot4 = new THREE.Matrix4();
-	vis.q1 = new THREE.Quaternion();
-	vis.q2 = new THREE.Quaternion();
-	vis.scale = new THREE.Vector3();
-	vis.forward = new THREE.Vector3(0, 0, 1.0);
-	vis.up = new THREE.Vector3(0, 1.0, 0);
-
-	vis.tick = 0;
-
-	vis.faceGroup = faceGroup;
-
-	for (let i = 0; i < agents.length; i++) {
-
-		const agentData = { agent: agents[i] };
-		vis.visAgents.push(agentData);
-
-	}
-
-
-	vis.side1 = createLatticeSide(vis.cols[0], -1);
-	faceGroup.add(vis.side1.line);
-	vis.side2 = createLatticeSide(vis.cols[1], 1);
-	faceGroup.add(vis.side2.line);
-
-	vis.update = function (deltaTime, time) {
-
-		this.tick += deltaTime;
-
-		let posAttribute = this.side1.line.geometry.getAttribute("position");
-		let x, y, z;
-		for (let i = 0; i < 256; i++) {
-
-			let id = i * 2 + 1;
-
-			let segment = this.visAgents[0].agent.wander.trailSegments[i];
-
-			posAttribute.setXYZ(id, segment.x, segment.y, segment.z);
-
-		}
-		posAttribute.needsUpdate = true;
-
-		posAttribute = this.side2.line.geometry.getAttribute("position");
-		for (let i = 0; i < 256; i++) {
-
-			let id = i * 2 + 1;
-
-			let segment = this.visAgents[1].agent.wander.trailSegments[i];
-
-			posAttribute.setXYZ(id, segment.x, segment.y, segment.z);
-
-		}
-		posAttribute.needsUpdate = true;
-
-		/*
-		let visAgent, visAgentWander;
-		for ( let j = 0; j < vis.visAgents.length; j++ ) {
-			
-			visAgent = this.visAgents[ j ];
-			visAgentWander = visAgent.agent.wander;
-			
-			for ( let i = 0; i < this.numSpineInstances; i++ ) {
-
-				let t = i / this.numSpineInstances;
-				let segmentI = Math.floor( t * visAgentWander.numTrailSegments );
-				let segmentT = t * visAgentWander.numTrailSegments - Math.floor( t * visAgentWander.numTrailSegments );
-				let spikeData = visAgent.spikeData[ i ];
-
-				if ( segmentI < visAgentWander.numTrailSegments - 1 ) {
-
-					this.pos.copy( visAgentWander.trailSegments[ segmentI ] ).lerp( visAgentWander.trailSegments[ segmentI + 1 ], segmentT );
-
-				} else {
-
-					this.pos.copy( visAgentWander.trailSegments[ segmentI ] );
-
-				}
-
-
-				if ( segmentI == 0 ) {
-
-					this.vec2.copy( this.pos );
-					this.vec2.add( this.vec1.copy( visAgentWander.trailSegments[ 0 ] ).sub( visAgentWander.trailSegments[ 1 ] ).normalize() );
-
-				} else {
-
-					this.vec2.copy( this.pos );
-					this.vec2.add( this.vec1.copy( visAgentWander.trailSegments[ segmentI - 1 ] ).sub( visAgentWander.trailSegments[ segmentI ] ).normalize() );
-
-				}
-
-				this.matRot4.lookAt( this.pos, this.vec2, this.up );
-				this.q1.setFromRotationMatrix( this.matRot4 );
-				
-				this.q2.setFromAxisAngle( this.forward, t * Math.PI * 2 * this.numSpineLoops + this.tick * 1.0 );
-				this.q1.multiply( this.q2 );
-				
-				spikeData.q.slerp( this.q1, deltaTime * 2.0 );
-
-				let scXY = THREE.MathUtils.smoothstep( t, 0, 0.1 ) * ( 1.0 - THREE.MathUtils.smoothstep( t, 0.9, 1.0 ) ) * 1.0;
-				let sc = Math.max( scXY + Math.sin( t * Math.PI * 2 * 30.0 + this.tick * -3.0 ) * ( scXY * 0.9 ), 0.3 );
-				sc = scXY;
-				this.scale.setScalar( sc );
-
-				let rndMult = Math.max ( scXY + Math.sin( t * Math.PI * 4 ) * 0.4 + Math.sin( t * Math.PI * 5 - this.tick * 4.0 ) * 0.4, 0.1 );
-
-				this.mat4.compose( this.pos, spikeData.q, this.scale );
-
-				visAgent.spikeMesh.setMatrixAt( i, this.mat4 );
-
-			}
-			
-			for ( let i = 0; i < this.numBodyInstances; i++ ) {
+			for (let i = 0; i < this.numBodyInstances; i++) {
 
 				let t = i / this.numBodyInstances;
-				let segmentI = Math.floor( t * visAgentWander.numTrailSegments );
-				let segmentT = t * visAgentWander.numTrailSegments - Math.floor( t * visAgentWander.numTrailSegments );
+				let segmentI = Math.floor(t * visAgentWander.numTrailSegments);
+				let segmentT = t * visAgentWander.numTrailSegments - Math.floor(t * visAgentWander.numTrailSegments);
 
-				let bodyData = visAgent.bodyData[ i ];
+				if (segmentI < visAgentWander.numTrailSegments - 1) {
 
-				if ( segmentI < visAgentWander.numTrailSegments - 1 ) {
-
-					this.pos.copy( visAgentWander.trailSegments[ segmentI ] ).lerp( visAgentWander.trailSegments[ segmentI + 1 ], segmentT );
+					this.pos.copy(visAgentWander.trailSegments[segmentI]).lerp(visAgentWander.trailSegments[segmentI + 1], segmentT);
 
 				} else {
 
-					this.pos.copy( visAgentWander.trailSegments[ segmentI ] );
+					this.pos.copy(visAgentWander.trailSegments[segmentI]);
 
 				}
 
 
-				if ( segmentI == 0 ) {
+				if (segmentI == 0) {
 
-					this.vec2.copy( this.pos );
-					this.vec2.add( this.vec1.copy( visAgentWander.trailSegments[ 0 ] ).sub( visAgentWander.trailSegments[ 1 ] ).normalize() );
+					this.vec2.copy(this.pos);
+					this.vec2.add(this.vec1.copy(visAgentWander.trailSegments[0]).sub(visAgentWander.trailSegments[1]).normalize());
 
 				} else {
 
-					this.vec2.copy( this.pos );
-					this.vec2.add( this.vec1.copy( visAgentWander.trailSegments[ segmentI - 1 ] ).sub( visAgentWander.trailSegments[ segmentI ] ).normalize() );
+					this.vec2.copy(this.pos);
+					this.vec2.add(this.vec1.copy(visAgentWander.trailSegments[segmentI - 1]).sub(visAgentWander.trailSegments[segmentI]).normalize());
 
 				}
-				
-				let scXY = THREE.MathUtils.smoothstep( t, 0, 0.1 ) * ( 1.0 - THREE.MathUtils.smoothstep( t, 0.9, 1.0 ) ) * 0.4;
-				let sc = Math.max( scXY + Math.sin( t * Math.PI * 2 * 30.0 + this.tick * -3.0 ) * ( scXY * 0.9 ), 0.3 );
-				this.scale.setScalar( sc );
 
-				let rndMult = Math.max ( scXY + Math.sin( t * Math.PI * 4 ) * 0.4 + Math.sin( t * Math.PI * 5 - this.tick * 4.0 ) * 0.4, 0.1 );
-				this.vec3.copy( bodyData.rnd ).multiplyScalar( rndMult );
-				this.pos.add( this.vec3 );
+				bodyDirs.setXYZ(i, this.vec2.x, this.vec2.y, this.vec2.z);
+				bodyIPos.setXYZ(i, this.pos.x, this.pos.y, this.pos.z);
 
-				this.mat4.compose( this.pos, this.q1, this.scale );
-
-				visAgent.bodyMesh.setMatrixAt( i, this.mat4 );
-
-			}			
+			}
 
 			visAgent.spikeMesh.instanceMatrix.needsUpdate = true;
-			visAgent.bodyMesh.instanceMatrix.needsUpdate = true;
+			bodyDirs.needsUpdate = true;
+			bodyIPos.needsUpdate = true;
 
 		}
-		*/
 
 	}
 
 	return vis;
-
-}
-
-function createLatticeSide(col, xDir) {
-
-	const side = {};
-	const cubeW = 1.0;
-	const numConnections = 256;
-
-	side.connectionPoints = new Float32Array(256 * 2 * 3);
-	side.geo = new THREE.BufferGeometry();
-
-	const connectionSpacing = cubeW / (numConnections / 4);
-
-	let id = 0;
-	for (let i = 0; i < numConnections / 4; i++) {
-
-		const x = cubeW * 0.5 * xDir;
-		const y = -cubeW * 0.5 + i * connectionSpacing;
-		const z = -cubeW * 0.5;
-		side.connectionPoints[id] = x;
-		side.connectionPoints[id + 1] = y;
-		side.connectionPoints[id + 2] = z;
-		id += 3;
-		side.connectionPoints[id] = x;
-		side.connectionPoints[id + 1] = -cubeW * 0.5 + 0.2;
-		side.connectionPoints[id + 2] = z;
-		id += 3;
-
-	}
-	for (let i = 0; i < numConnections / 4; i++) {
-
-		const x = cubeW * 0.5 * xDir;
-		const y = cubeW * 0.5;
-		const z = -cubeW * 0.5 + i * connectionSpacing;
-		side.connectionPoints[id] = x;
-		side.connectionPoints[id + 1] = y;
-		side.connectionPoints[id + 2] = z;
-		id += 3;
-		side.connectionPoints[id] = x;
-		side.connectionPoints[id + 1] = -cubeW * 0.5 + 0.2;
-		side.connectionPoints[id + 2] = z;
-		id += 3;
-
-	}
-	for (let i = 0; i < numConnections / 4; i++) {
-
-		const x = cubeW * 0.5 * xDir;
-		const y = cubeW * 0.5 - i * connectionSpacing;
-		const z = cubeW * 0.5;
-		side.connectionPoints[id] = x;
-		side.connectionPoints[id + 1] = y;
-		side.connectionPoints[id + 2] = z;
-		id += 3;
-		side.connectionPoints[id] = x;
-		side.connectionPoints[id + 1] = -cubeW * 0.5 + 0.2;
-		side.connectionPoints[id + 2] = z;
-		id += 3;
-
-	}
-	for (let i = 0; i < numConnections / 4; i++) {
-
-		const x = cubeW * 0.5 * xDir;
-		const y = -cubeW * 0.5;
-		const z = cubeW * 0.5 - i * connectionSpacing;
-		side.connectionPoints[id] = x;
-		side.connectionPoints[id + 1] = y;
-		side.connectionPoints[id + 2] = z;
-		id += 3;
-		side.connectionPoints[id] = x;
-		side.connectionPoints[id + 1] = -cubeW * 0.5 + 0.2;
-		side.connectionPoints[id + 2] = z;
-		id += 3;
-
-	}
-
-	side.geo.setAttribute('position', new THREE.BufferAttribute(side.connectionPoints, 3));
-
-	const mat = new THREE.LineBasicMaterial({ color: col });
-	side.line = new THREE.LineSegments(side.geo, mat);
-	return side;
 
 }
 
