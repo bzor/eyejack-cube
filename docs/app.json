@@ -35,7 +35,7 @@
 			"near": 0.01,
 			"far": 50,
 			"focus": 10,
-			"aspect": 1.1268248175182483,
+			"aspect": 1.54375,
 			"filmGauge": 35,
 			"filmOffset": 0
 		}
@@ -160,7 +160,7 @@
 		"bb47580c-0ba3-4701-a8cc-a859ba88f405": [
 			{
 				"name": "frontBG",
-				"source": "function init() {\n\n\tthis.material.uniforms = {\n\n\t\tcol1: { value: new THREE.Color( 0x281023 ) },\n\t\tcol2: { value: new THREE.Color( 0x522232 ) },\t\n\t\tcol3: { value: new THREE.Color( 0x2f2b42 ) }\t\t\n\t\t\n\t}\n\n\t/*\n\tthis.material.uniforms = {\n\n\t\tcol1: { value: new THREE.Color( 0xFF0000 ) },\n\t\tcol2: { value: new THREE.Color( 0x0000FF ) },\n\t\tcol3: { value: new THREE.Color( 0x00FF00 ) }\t\t\n\t\t\n\t}\t\n\t*/\n\t\n}"
+				"source": "function init() {\n\t\n\tthis.material.uniforms = {\n\n\t\tcol1: { value: new THREE.Color( 0x281023 ).convertSRGBToLinear() },\n\t\tcol2: { value: new THREE.Color( 0x522232 ).convertSRGBToLinear() },\t\n\t\tcol3: { value: new THREE.Color( 0x2f2b42 ).convertSRGBToLinear() }\t\t\n\t\t\n\t}\n\n\t/*\n\tthis.material.uniforms = {\n\n\t\tcol1: { value: new THREE.Color( 0xFF0000 ) },\n\t\tcol2: { value: new THREE.Color( 0x0000FF ) },\n\t\tcol3: { value: new THREE.Color( 0x00FF00 ) }\t\t\n\t\t\n\t}\t\n\t*/\n\t\n}"
 			}]
 	}
 }
