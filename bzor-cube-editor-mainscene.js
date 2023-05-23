@@ -224,7 +224,7 @@ varying vec3 vCol;
 void main() {
 
 	if ( length( gl_PointCoord - vec2( 0.5, 0.5 ) ) > 0.475 ) discard;
-    gl_FragColor = vec4( vCol, 1.0 );
+    gl_FragColor = sRGBToLinear( vec4( vCol, 1.0 ) );
 
 }
 `;
@@ -257,7 +257,8 @@ varying vec3 vCol;
 
 void main() {
 
-    gl_FragColor = vec4( vCol, 1.0 );
+	vec4 col = vec4( vCol, 1.0 );
+    gl_FragColor = col;
 
 }
 `;
@@ -286,7 +287,7 @@ function createDust() {
 		
 	}
 					 
-	const mat = new THREE.ShaderMaterial( { uniforms: { col: { value: new THREE.Color( 0x282037 ).convertSRGBToLinear() }, pixelRatio: { value: window.devicePixelRatio } }, vertexShader: dustVert, fragmentShader: dustFrag } );
+	const mat = new THREE.ShaderMaterial( { uniforms: { col: { value: new THREE.Color( 0x282037 ) }, pixelRatio: { value: window.devicePixelRatio } }, vertexShader: dustVert, fragmentShader: dustFrag } );
 	mat.blending = THREE.AdditiveBlending;
 	
 	const dustGeo = new THREE.IcosahedronGeometry( 0.0025, 0 );
@@ -511,7 +512,7 @@ function vis1( faceGroup ) {
 		geo.translate( 0, vis.spineElemH * 0.5 + 0.05, 0 );
 		
 		const spikeUniforms = {
-			"col1": { value: new THREE.Color( vis.cols[ i ] ).convertSRGBToLinear() },
+			"col1": { value: new THREE.Color( vis.cols[ i ] ) },
 		};
 		const mat = new THREE.ShaderMaterial( { uniforms: spikeUniforms, vertexShader: vis1SpikeVert, fragmentShader: vis1SpikeFrag } );
 		mat.blending = THREE.AdditiveBlending;
@@ -522,8 +523,8 @@ function vis1( faceGroup ) {
 		faceGroup.add( spikeMesh );
 
 		const bodyUniforms = {
-			"col1": { value: new THREE.Color( vis.bodyCols[ i ] ).convertSRGBToLinear() },
-			"col2": { value: new THREE.Color( vis.bodyCols[ 1 - i ] ).convertSRGBToLinear() },
+			"col1": { value: new THREE.Color( vis.bodyCols[ i ] ) },
+			"col2": { value: new THREE.Color( vis.bodyCols[ 1 - i ] ) },
 			"uTime": { value: 0 }
 		};
 		const bodyMat = new THREE.ShaderMaterial( { uniforms: bodyUniforms, vertexShader: vis1BodyVert, fragmentShader: vis1BodyFrag } );
@@ -760,8 +761,8 @@ function vis2( faceGroup ) {
 		geo.translate( 0, vis.elemScale * 2.0, 0 );
 		
 		const spikeUniforms = {
-			"col1": { value: new THREE.Color( vis.cols[ i ] ).convertSRGBToLinear() },
-			"col2": { value: new THREE.Color( 0x000000 ).convertSRGBToLinear() },
+			"col1": { value: new THREE.Color( vis.cols[ i ] ) },
+			"col2": { value: new THREE.Color( 0x000000 ) },
 		};
 		const mat = new THREE.ShaderMaterial( { uniforms: spikeUniforms, vertexShader: vis2SpikeVert, fragmentShader: vis2SpikeFrag } );
 		//const mat = new THREE.MeshBasicMaterial( { color: vis.cols[ i ] } );
