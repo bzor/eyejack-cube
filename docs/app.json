@@ -32,7 +32,7 @@
 			"generator": "Object3D.toJSON"
 		},
 		"object": {
-			"uuid": "95a6975f-e814-4802-b388-8e64d456710c",
+			"uuid": "601dbc38-5107-48d2-9f10-079ac66ab42b",
 			"type": "PerspectiveCamera",
 			"name": "Camera",
 			"layers": 1,
