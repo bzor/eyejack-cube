@@ -214,22 +214,90 @@ export const main = ({ renderer, renderTarget, camera, scene, loadingManager, gu
     //
   };
 
-	const dispose = () => {
-		if (sceneLoaded) {
-			sceneLoaded.traverse(obj => {
-				// Puase audios
-				if (obj && obj.__ejx_audio) {
-					obj.__ejx_audio.pause();
-					delete obj.__ejx_audio;
+	const disposeTextures = ( material ) => {
+
+		// Explicitly dispose any textures assigned to this material
+		for ( const propertyName in material ) {
+
+			const texture = material[ propertyName ];
+
+			if ( texture instanceof THREE.Texture ) {
+
+				const image = texture.source.data;
+
+				if ( image instanceof ImageBitmap ) {
+
+					image.close && image.close();
+
 				}
-				// Pause videos
-				if (obj && obj.__ejx_video) {
-					obj.__ejx_video.pause();
-					delete obj.__ejx_video;
-				}
-			})
+
+				texture.dispose();
+
+			}
 
 		}
+
+	};
+
+	const disposeNode = ( node ) => {
+
+		if ( node instanceof THREE.Mesh ) {
+
+			if ( node.geometry ) node.geometry.dispose();
+
+			const material = node.material;
+			if ( material ) {
+
+				if ( Array.isArray( material ) ) {
+
+					for ( let i = 0, l = material.length; i < l; i ++ ) {
+
+						const m = material[ i ];
+						disposeTextures( m );
+						m.dispose();
+
+					}
+
+				} else {
+
+					disposeTextures( material );
+					material.dispose(); // disposes any programs associated with the material
+
+				}
+
+			}
+
+		}
+
+	};
+
+	const dispose = () => {
+
+		if ( sceneLoaded ) {
+
+			sceneLoaded.traverse( obj => {
+
+				disposeNode( obj );
+				// Puase audios
+				if ( obj && obj.__ejx_audio ) {
+
+					obj.__ejx_audio.pause();
+					delete obj.__ejx_audio;
+
+				}
+
+				// Pause videos
+				if ( obj && obj.__ejx_video ) {
+
+					obj.__ejx_video.pause();
+					delete obj.__ejx_video;
+
+				}
+
+			} );
+
+		}
+
 	};
 
 	const pointerdown = (event) => {

@@ -1,4 +1,4 @@
-import { Vector3, BufferGeometry, Float32BufferAttribute, Raycaster, Vector2, MathUtils, Mesh, BackSide, FrontSide, Color, RawShaderMaterial, Vector4, DoubleSide, sRGBEncoding, RepeatWrapping, NearestFilter, LinearEncoding, TextureLoader, BoxGeometry, MeshBasicMaterial, Object3D, PlaneGeometry, OrthographicCamera, ShaderMaterial, UniformsUtils, WebGLRenderTarget, Clock, AdditiveBlending, Plane, WebGLRenderer, NoToneMapping, PerspectiveCamera, Scene, ClampToEdgeWrapping, LinearFilter, RGBAFormat, UnsignedByteType, Texture, Matrix4, Box2, Matrix3 } from 'three';
+import { Vector3, BufferGeometry, Float32BufferAttribute, Raycaster, Vector2, MathUtils, Mesh, BackSide, FrontSide, Color, RawShaderMaterial, Vector4, DoubleSide, sRGBEncoding, RepeatWrapping, NearestFilter, LinearEncoding, TextureLoader, BoxGeometry, MeshBasicMaterial, Object3D, PlaneGeometry, OrthographicCamera, ShaderMaterial, UniformsUtils, WebGLRenderTarget, Clock, AdditiveBlending, ColorManagement, Plane, WebGLRenderer, NoToneMapping, PerspectiveCamera, Scene, ClampToEdgeWrapping, LinearFilter, RGBAFormat, UnsignedByteType, Texture, Matrix4, Box2, Matrix3 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
@@ -1107,6 +1107,7 @@ class EJCubeMask {
       depthTest: false,
     });
     this.cubeBack = new Mesh(this.cubeBackGeometry, this.cubeBackMaterial);
+    this.cubeBack.frustumCulled = false;
     this.cubeBack.name = 'cube-mask-back';
     this.container.add(this.cubeBack);
 
@@ -1124,6 +1125,7 @@ class EJCubeMask {
         depthTest: false,
       });
       const cubeFace = new Mesh(cubeFaceGeom, cubeFaceMat);
+      cubeFace.frustumCulled = false;
       if (i === 0) {
         cubeFace.position.z = 0.5;
       } else if (i === 1) {
@@ -1167,7 +1169,7 @@ class EJEnv {
     this.container = container;
     this.camera = camera;
 
-    this.texture = new TextureLoader().load('./libs/ejx/assets/gallery.jpg', this.textureLoaded.bind(this));
+    this.texture = new TextureLoader().load('./libs/ejx/assets/env/deathstar-bourgeois.jpg', this.textureLoaded.bind(this));
     this.texture.encoding = sRGBEncoding;
 
     this.geometry = new PlaneGeometry(1, 1, 1, 1);
@@ -2151,6 +2153,9 @@ class EJPostProcessing {
 }
 
 /* eslint-disable max-len */
+
+// ---------------------------------------------------------------- Color Management
+ColorManagement.enabled = true;
 
 // ---------------------------------------------------------------- EJPlayer
 class EJPlayer {
@@ -3205,384 +3210,6 @@ class EJPlayer {
   }
 }
 
-/* eslint-disable max-len */
-
-// Parallax Occlusion shaders from
-// http://sunandblackcat.com/tipFullView.php?topicid=28
-// No tangent-space transforms logic based on
-// http://mmikkelsen3d.blogspot.sk/2012/02/parallaxpoc-mapping-and-no-tangent.html
-
-let ParallaxShader = {
-  // Ordered from fastest to best quality.
-  modes: {
-    none: 'NO_PARALLAX',
-    basic: 'USE_BASIC_PARALLAX',
-    steep: 'USE_STEEP_PARALLAX',
-    occlusion: 'USE_OCLUSION_PARALLAX', // a.k.a. POM
-    relief: 'USE_RELIEF_PARALLAX',
-  },
-
-  uniforms: {
-    'over': { value: null },
-    'bumpMap': { value: null },
-    'map': { value: null },
-    'parallaxScale': { value: null },
-    'parallaxMinLayers': { value: null },
-    'parallaxMaxLayers': { value: null },
-    'maxDepth': { value: null },
-    'depthScale': { value: null },
-  },
-
-  vertexShader: `
-    varying vec2 vUv;
-    varying vec3 vViewPosition;
-    varying vec3 vNormal;
-
-    void main() {
-
-      vUv = uv;
-      vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-      vViewPosition = -mvPosition.xyz;
-      vNormal = normalize( normalMatrix * normal );
-      gl_Position = projectionMatrix * mvPosition;
-    }
-  `,
-
-  fragmentShader: `
-    // uniform sampler2D bumpMap;
-    uniform sampler2D map;
-
-    uniform float over;
-    uniform float opacity;
-    uniform float parallaxScale;
-    uniform float parallaxMinLayers;
-    uniform float parallaxMaxLayers;
-
-    uniform float maxDepth;
-    uniform float depthScale;
-
-    varying vec2 vUv;
-    varying vec3 vViewPosition;
-    varying vec3 vNormal;
-
-    float getHeightAt(vec2 uv) {
-      // return texture2D( bumpMap, currentTextureCoords ).r;
-      float edgeDistX = min(0. + uv.x, 1. - uv.x) * 2.;
-      float edgeDistY = min(0. + uv.y, 1. - uv.y) * 2.;
-      return min(min(edgeDistX, edgeDistY), maxDepth) / maxDepth * depthScale;
-    }
-
-    #ifdef USE_BASIC_PARALLAX
-
-      vec2 parallaxMap( in vec3 V ) {
-
-        float initialHeight = getHeightAt(vUv);
-
-        // No Offset Limitting: messy, floating output at grazing angles.
-        //vec2 texCoordOffset = parallaxScale * V.xy / V.z * initialHeight;
-
-        // Offset Limiting
-        vec2 texCoordOffset = parallaxScale * V.xy * initialHeight;
-        return vUv - texCoordOffset;
-
-      }
-
-    #else
-
-      vec2 parallaxMap( in vec3 V ) {
-
-        // Determine number of layers from angle between V and N
-        float numLayers = mix( parallaxMaxLayers, parallaxMinLayers, abs( dot( vec3( 0.0, 0.0, 1.0 ), V ) ) );
-
-        float layerHeight = 1.0 / numLayers;
-        float currentLayerHeight = 0.0;
-        // Shift of texture coordinates for each iteration
-        vec2 dtex = parallaxScale * V.xy / V.z / numLayers;
-
-        vec2 currentTextureCoords = vUv;
-
-        float heightFromTexture = getHeightAt(currentTextureCoords);
-
-        // while ( heightFromTexture > currentLayerHeight )
-        // Infinite loops are not well supported. Do a large finit
-        // loop, but not too large, as it slows down some compilers.
-        for ( int i = 0; i < 30; i += 1 ) {
-          if ( heightFromTexture <= currentLayerHeight ) {
-            break;
-          }
-          currentLayerHeight += layerHeight;
-          // Shift texture coordinates along vector V
-          currentTextureCoords -= dtex;
-          heightFromTexture = getHeightAt(currentTextureCoords);
-        }
-
-        #ifdef USE_STEEP_PARALLAX
-
-          return currentTextureCoords;
-
-        #elif defined( USE_RELIEF_PARALLAX )
-
-          vec2 deltaTexCoord = dtex / 2.0;
-          float deltaHeight = layerHeight / 2.0;
-
-          // Return to the mid point of previous layer
-          currentTextureCoords += deltaTexCoord;
-          currentLayerHeight -= deltaHeight;
-
-          // Binary search to increase precision of Steep Parallax Mapping
-          const int numSearches = 5;
-          for ( int i = 0; i < numSearches; i += 1 ) {
-
-            deltaTexCoord /= 2.0;
-            deltaHeight /= 2.0;
-            heightFromTexture = getHeightAt(currentTextureCoords);
-            // Shift along or against vector V
-            if( heightFromTexture > currentLayerHeight ) { // Below the surfac
-
-              currentTextureCoords -= deltaTexCoord;
-              currentLayerHeight += deltaHeight;
-
-            } else { // above the surfac
-
-              currentTextureCoords += deltaTexCoord;
-              currentLayerHeight -= deltaHeight;
-
-            }
-
-          }
-          return currentTextureCoords;
-
-        #elif defined( USE_OCLUSION_PARALLAX )
-
-          vec2 prevTCoords = currentTextureCoords + dtex;
-
-          // Heights for linear interpolation
-          float nextH = heightFromTexture - currentLayerHeight;
-          float prevH = getHeightAt(vUv) - currentLayerHeight + layerHeight;
-
-          // Proportions for linear interpolation
-          float weight = nextH / ( nextH - prevH );
-
-          // Interpolation of texture coordinates
-          return prevTCoords * weight + currentTextureCoords * ( 1.0 - weight );
-
-        #else // NO_PARALLA
-
-          return vUv;
-
-        #endif
-
-      }
-    #endif
-
-    vec2 perturbUv( vec3 surfPosition, vec3 surfNormal, vec3 viewPosition ) {
-
-      vec2 texDx = dFdx( vUv );
-      vec2 texDy = dFdy( vUv );
-
-      vec3 vSigmaX = dFdx( surfPosition );
-      vec3 vSigmaY = dFdy( surfPosition );
-      vec3 vR1 = cross( vSigmaY, surfNormal );
-      vec3 vR2 = cross( surfNormal, vSigmaX );
-      float fDet = dot( vSigmaX, vR1 );
-
-      vec2 vProjVscr = ( 1.0 / fDet ) * vec2( dot( vR1, viewPosition ), dot( vR2, viewPosition ) );
-      vec3 vProjVtex;
-      vProjVtex.xy = texDx * vProjVscr.x + texDy * vProjVscr.y;
-      vProjVtex.z = dot( surfNormal, viewPosition );
-
-      return parallaxMap( vProjVtex );
-    }
-
-    vec4 alphaBlend( vec4 src, vec4 dst ) {
-      float final_alpha = src.a + dst.a * (1.0 - src.a);
-      if( final_alpha == 0.0 ) {
-        return vec4( 0.0, 0.0, 0.0, 0.0 );
-      }
-      return vec4( (src.rgb * src.a + dst.rgb * dst.a * (1.0 - src.a)) / final_alpha, final_alpha);
-    }
-
-
-    void main() {
-      vec2 mapUv = perturbUv( -vViewPosition, normalize( vNormal ), normalize( vViewPosition ) );
-
-      vec4 colorLight = vec4(0.8, 0.8, 0.8, 1.0);
-      vec4 colorTexture = texture2D(map, mapUv);
-      if( colorTexture.a > 0.0 ) {
-        colorTexture.rgb /= colorTexture.a; // removes dark edges around alpha.
-      }      
-      colorTexture = mix( colorTexture, vec4(1.0, 1.0, 1.0, colorTexture.a), over * 0.4 );
-
-      vec4 colorFinal = alphaBlend(colorTexture, colorLight);
-      colorFinal.a *= opacity;
-
-      gl_FragColor = colorFinal;
-      // gl_FragColor = texture2D(map, vUv);
-      // gl_FragColor = mix(gl_FragColor, vec4(vec3(getHeightAt(vUv)), 1.), 0.8);
-    }
-  `,
-};
-
-let cachedGeometry;
-const getCachedGeometry = () => {
-  if (cachedGeometry) {
-    return cachedGeometry;
-  }
-  const geometry = new PlaneGeometry(1, 1);
-  geometry.computeTangents();
-  geometry.computeVertexNormals();
-  cachedGeometry = geometry;
-  return geometry;
-};
-
-let cachedMaterial;
-const getCachedMaterial = () => {
-  if (cachedMaterial) {
-    // Re-uses the same material but allows unique uniforms
-    return cachedMaterial.clone();
-  }
-  const material = new ShaderMaterial({
-    uniforms: {
-      'over': { value: 0 },
-      'opacity': { value: 1 },
-      'bumpMap': { value: null },
-      'map': { value: null },
-      'parallaxScale': { value: 1 },
-      'parallaxMinLayers': { value: 5 },
-      'parallaxMaxLayers': { value: 25 },
-      'maxDepth': { value: 0.3 },
-      'depthScale': { value: 0 },
-    },
-    defines: {
-      [ParallaxShader.modes.relief]: '',
-    },
-    vertexShader: ParallaxShader.vertexShader,
-    // grid shader.
-    // http://madebyevan.com/shaders/grid/
-    //
-    fragmentShader: ParallaxShader.fragmentShader,
-    side: FrontSide,
-    transparent: true,
-    depthWrite: false,
-    depthTest: false,
-  });
-  cachedMaterial = material;
-  return material;
-};
-
-// ---------------------------------------------------------------- EJCubeImage
-class EJCubeImage {
-  constructor(container) {
-    this.container = container;
-    this.cubeTextures = [];
-    this.cubeRenderTargets = [];
-
-    this.cube = new Object3D();
-    this.cube.name = 'cube-image';
-    for (let i = 0; i < 6; i++) {
-      const cubeFace = new Mesh(getCachedGeometry(), getCachedMaterial());
-      cubeFace.onBeforeRender = (_1, _2, camera) => {
-        // cubeFace.material.uniforms.viewMatrixInverse.value.copy(camera.matrixWorld).invert();
-      };
-      if (i === 0) {
-        cubeFace.name = 'cube-face-front';
-        cubeFace.position.z = 0.5;
-      } else if (i === 1) {
-        cubeFace.name = 'cube-face-right';
-        cubeFace.position.x = 0.5;
-        cubeFace.rotation.y = Math.PI * 0.5;
-      } else if (i === 2) {
-        cubeFace.name = 'cube-face-back';
-        cubeFace.position.z = -0.5;
-        cubeFace.rotation.y = Math.PI;
-      } else if (i === 3) {
-        cubeFace.name = 'cube-face-left';
-        cubeFace.position.x = -0.5;
-        cubeFace.rotation.y = -Math.PI * 0.5;
-      } else if (i === 4) {
-        cubeFace.name = 'cube-face-top';
-        cubeFace.position.y = 0.5;
-        cubeFace.rotation.x = -Math.PI * 0.5;
-      } else if (i === 5) {
-        cubeFace.name = 'cube-face-bottom';
-        cubeFace.position.y = -0.5;
-        cubeFace.rotation.x = Math.PI * 0.5;
-      }
-      this.cube.add(cubeFace);
-    }
-    this.container.add(this.cube);
-
-    this.userData = {};
-  }
-
-  load(path, urls, onLoadCallback) {
-    const loader = new ImageLoader();
-    loader.setPath(path);
-
-    // px, nx, py, ny, pz, nz
-    const faceIndices = [1, 3, 4, 5, 0, 2];
-
-    let loadCount = 0;
-    const onLoadCount = () => {
-      loadCount += 1;
-      if ( loadCount == 6 ) {
-        if ( onLoadCallback ) {
-          onLoadCallback(this);
-        }
-      }
-    };
-
-    for (let i = 0; i < urls.length; ++i) {
-      const faceIndex = faceIndices[i];
-
-      const onLoad = texture => {
-        const w = texture.source.data.width;
-        const h = texture.source.data.height;
-
-        this.cubeTextures[faceIndex] = texture;
-
-        const renderTarget = new WebGLRenderTarget(w, h, {
-          wrapS: ClampToEdgeWrapping,
-          wrapT: ClampToEdgeWrapping,
-          magFilter: LinearFilter,
-          minFilter: LinearFilter,
-          generateMipmaps: false,
-          format: RGBAFormat,
-          type: UnsignedByteType,
-          anisotropy: Texture.anisotropy,
-          encoding: sRGBEncoding,
-          depthBuffer: true,
-          stencilBuffer: true,
-          samples: 0,
-        });
-        renderTarget.texture.name = 'EJCubeImage.renderTarget';
-        this.cubeRenderTargets[faceIndex] = renderTarget;
-
-        const cubeFace = this.cube.children[faceIndex];
-        cubeFace.material.uniforms.map.value = renderTarget.texture;
-
-        onLoadCount();
-      };
-
-      const loader = new THREE.TextureLoader();
-      loader.load(
-        path + urls[i],
-        onLoad, // onLoad.
-        undefined, // onProgress.
-        undefined // onError.
-      );
-    }
-  }
-
-  blur(renderer) {
-    //
-  }
-
-  update(elapsed, delta) {
-    //
-  }
-}
-
 /*
  * Copyright 2017 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the 'License');
@@ -3603,7 +3230,6 @@ class EJCubeImage {
 // them on the THREE global
 if (typeof window !== 'undefined' ) {
   window.EJPlayer = EJPlayer;
-  window.EJCubeImage = EJCubeImage;
 }
 
-export { EJCubeImage, EJPlayer };
+export { EJPlayer };
