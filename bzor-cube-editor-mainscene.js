@@ -455,10 +455,7 @@ void main() {
 	
 	vec3 lightDir = normalize( vec3( -1.0, 0.5, 0.0 ) );
 	
-	vec3 vCol1 = col1_1;
-	//vCol1 = mix( vCol1, vec3( 0.0, 0.0, 0.5 ), clamp( dot( lightDir, worldNormal.xyz ), 0.0, 1.0 ) );
-	
-	//vec3 vCol2 = mix( col2_1, col2_2, smoothstep( -0.3, 0.3, iPos.y ) );
+	vec3 vCol1 = col1_1;	
 	vec3 vCol2 = col2_1;
 
 	float dir = dot ( cameraPosition - groupPos, groupDir );
@@ -723,7 +720,7 @@ function vis1(faceGroup) {
 
 				let closestDist = 1000.0;
 				let dist;
-				let maxDist = 0.035;
+				let maxDist = 0.04;
 				for (let k = 0; k < otherVisAgent.agent.wander.trailSegments.length; k++) {
 
 					dist = this.pos.distanceToSquared(otherVisAgent.agent.wander.trailSegments[k]);
@@ -795,6 +792,7 @@ function vis1(faceGroup) {
 
 const vis2SpikeVert = `
 
+#define PI 3.141592653589793
 uniform vec3 col1_1;
 uniform vec3 col1_2;
 uniform vec3 col2_1;
@@ -819,17 +817,18 @@ void main() {
 	float dir = dot ( groupToCam, groupDir );
 	float dirT = smoothstep( -0.01, 0.01, dir );
 
-	vec3 lightDir = normalize( vec3( 1.0, 1.0, -1.0 ) );
+	vec3 lightDir = normalize( vec3( 0.0, 1.0, 0.0 ) );
 	vec3 viewDir = cameraPosition - worldPos.xyz;
 	vec3 worldNormal = ( instanceMatrix * ( vec4( normal, 1.0 ) ) ).xyz;
-	vec3 specCol = col1_2;
-	vec3 spec = specCol * pow( max( 0.0, dot( reflect( -lightDir, worldNormal ), viewDir ) ), 4.0 );
 
-	vec3 vCol1 = col1_1 + spec * 1.0;
+
+	vec3 vCol1 = mix( col1_1, col1_2, max( sin( t * PI * 2.0 + uTime * 0.5 ), 0.0 ) );
 	
 	vec3 vCol2 = mix( col2_1, col2_2, smoothstep( -0.2, 0.2, iPos.y ) );
 	
-	lightDir = normalize( vec3( 1.0, 1.0, 0.0 ) );
+	lightDir = normalize( vec3( 1.0, 1.0, -1.0 ) );
+	
+	vCol1 = mix( vCol1 * 0.7, vCol1 * 1.8, clamp( dot( lightDir, normalize( worldNormal ) ), 0.0, 1.0 ) );
 	
 	vCol2 = mix( vCol2 * 0.2, vCol2 * 1.8, clamp( dot( lightDir, normalize( worldNormal ) ), 0.0, 1.0 ) );
 	
@@ -912,7 +911,7 @@ function vis2(faceGroup) {
 	vis.numBodyInstances = 512;
 	vis.numSpineLoops = 323;
 	vis.visAgents = [];
-	vis.cols1 = [0x39998f, 0x6c43b3];
+	vis.cols1 = [0x3b85ff, 0xbc3bff];
 	vis.cols2 = [0xff4c4c, 0x45e6af];
 	vis.bodyCols = [0x831230, 0x194db7];
 
@@ -938,7 +937,7 @@ function vis2(faceGroup) {
 
 		const spikeUniforms = {
 			"col1_1": { value: new THREE.Color(vis.cols1[i]) },
-			"col1_2": { value: new THREE.Color(0x481a7f) },
+			"col1_2": { value: new THREE.Color(vis.cols1[1 - i]) },
 			"col2_1": { value: new THREE.Color(vis.cols2[i]) },
 			"col2_2": { value: new THREE.Color(vis.cols2[1 - i]) },
 			"groupPos": { value: frontPos },
@@ -1145,6 +1144,7 @@ function vis2(faceGroup) {
 
 const vis3SpikeVert = `
 
+attribute vec3 iPos;
 uniform vec3 col1;
 uniform vec3 col2_1;
 uniform vec3 col2_2;
@@ -1154,17 +1154,15 @@ uniform vec3 groupDir;
 
 void main() {
 
-	vec4 vPos = vec4( position, 1.0 );	
-    vec4 iPos = instanceMatrix * vPos;
+    vec4 iPos = instanceMatrix * vec4( position, 1.0 );
     vec4 worldPos = modelMatrix * iPos;
     vec4 viewPos = viewMatrix * worldPos;
 
-	vec3 vCol1 = col1;
-	
-	vCol = vCol1;	
-	
     gl_Position = projectionMatrix * viewPos;
 
+	vec3 vCol1 = col1;
+	vCol = vCol1;	
+	
 }
 `;
 
@@ -1234,13 +1232,13 @@ function vis3(faceGroup) {
 
 	vis.spineElemR = 0.01;
 	vis.spineElemH = 0.04;
-	vis.bodyElemScale = 0.02;
+	vis.bodyElemScale = 0.016;
 	vis.numSpineInstances = 1024;
 	vis.numBodyInstances = 512;
 	vis.numSpineLoops = 323;
 	vis.visAgents = [];
-	vis.cols1 = [0x000000, 0x222222];
-	vis.cols2 = [0x222222, 0x000000];
+	vis.cols1 = [0xCCCCCC, 0xCCCCCC];
+	vis.cols2 = [0xCCCCCC, 0xCCCCCC];
 	vis.bodyCols = [0xFFFFFF, 0xFFFFFF];
 
 	vis.pos = new THREE.Vector3();
@@ -1264,7 +1262,8 @@ function vis3(faceGroup) {
 	for (let i = 0; i < agents.length; i++) {
 
 		//const geo = new THREE.ConeGeometry(vis.spineElemR, vis.spineElemH, 5, 1);
-		const geo = new THREE.CircleGeometry(vis.bodyElemScale, 8);
+		const boxW = 0.002;
+		const geo = new THREE.BoxGeometry(boxW, boxW, boxW);
 		geo.translate(0, vis.spineElemH * 0.5 + 0.05, 0);
 
 		const spikeUniforms = {
@@ -1283,6 +1282,12 @@ function vis3(faceGroup) {
 		const spikeMesh = new THREE.InstancedMesh(geo, spikeMat, vis.numSpineInstances);
 		spikeMesh.instanceMatrix.setUsage(THREE.StreamDrawUsage);
 		faceGroup.add(spikeMesh);
+
+		const spikeIPos = new Float32Array(vis.numSpineInstances * 3);
+		const spikeIposBuffer = new THREE.InstancedBufferAttribute(spikeIPos, 3);
+		spikeIposBuffer.setUsage(THREE.StreamDrawUsage);
+		geo.setAttribute('iPos', spikeIposBuffer);
+
 
 		const bodyUniforms = {
 			"col1": { value: new THREE.Color(vis.bodyCols[i]) },
@@ -1349,6 +1354,8 @@ function vis3(faceGroup) {
 			visAgent.spikeUniforms.groupPos.value = leftPos;
 			visAgent.spikeUniforms.groupDir.value = leftDir;
 
+			let spikeIPos = visAgent.spikeMesh.geometry.getAttribute("iPos");
+
 			for (let i = 0; i < this.numSpineInstances; i++) {
 
 				let t = i / this.numSpineInstances;
@@ -1395,6 +1402,7 @@ function vis3(faceGroup) {
 				let rndMult = Math.max(scXY + Math.sin(t * Math.PI * 4) * 0.4 + Math.sin(t * Math.PI * 5 - this.tick * 4.0) * 0.4, 0.1);
 
 				this.mat4.compose(this.pos, spikeData.q, this.scale);
+				this.pos.setFromMatrixPosition(this.mat4);
 
 				visAgent.spikeMesh.setMatrixAt(i, this.mat4);
 
@@ -1441,6 +1449,7 @@ function vis3(faceGroup) {
 			visAgent.spikeMesh.instanceMatrix.needsUpdate = true;
 			bodyDirs.needsUpdate = true;
 			bodyIPos.needsUpdate = true;
+			spikeIPos.needsUpdate = true;
 
 		}
 
