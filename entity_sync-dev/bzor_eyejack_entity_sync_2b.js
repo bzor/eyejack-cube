@@ -3,12 +3,8 @@
 const numAgents = 2;
 const agents = [];
 agents.length = numAgents;
-const agentTopVis = [];
-agentTopVis.length = numAgents;
-const agentFrontVis = [];
-agentFrontVis.length = numAgents;
-const agentLeftVis = [];
-agentLeftVis.length = numAgents;
+const agentsVis = [];
+agentsVis.length = numAgents;
 let segmentsVis;
 const segmentsVisCols = [0x00FFFF, 0x0FF00FF];
 
@@ -38,72 +34,90 @@ for (let i = 0; i < numAgents; i++) {
 
 //faces and gradient backgrounds
 let faceFront;
-let faceFrontEnv;
-const frontPos = new THREE.Vector3();
-const frontDir = new THREE.Vector3();
-let faceLeft;
-let faceLeftEnv;
-const leftPos = new THREE.Vector3();
-const leftDir = new THREE.Vector3();
+let faceBack;
 let faceTop;
+let faceBottom;
+let faceLeft;
+let faceRight;
 let faceFrontBG;
+let faceBackBG;
+let faceTopBG;
+let faceBottomBG;
 let faceLeftBG;
+let faceRightBG;
+let faces;
+
 const bgFrontUniforms = {
 
-	colFront1: {value: new THREE.Color(0x281023)},
-	colFront2: {value: new THREE.Color(0x2f2b42)},
-	colFront3: {value: new THREE.Color(0x522232)},
-	colBack1: {value: new THREE.Color(0x0d0f18)},
-	colBack2: {value: new THREE.Color(0x0c1e25)},
-	colBack3: {value: new THREE.Color(0x0e2d3b)},
-	groupPos: {value: new THREE.Vector3()},
-	groupDir: {value: new THREE.Vector3()}
+	col1: {value: new THREE.Color(0x281023)},
+	col2: {value: new THREE.Color(0x2f2b42)},
+
+}
+const bgBackUniforms = {
+
+	col1: {value: new THREE.Color(0x522232)},
+	col2: {value: new THREE.Color(0x0d0f18)},
+
+}
+const bgTopUniforms = {
+
+	col1: {value: new THREE.Color(0x0c1e25)},
+	col2: {value: new THREE.Color(0x0e2d3b)},
+
+}
+const bgBottomUniforms = {
+
+	col1: {value: new THREE.Color(0x265242)},
+	col2: {value: new THREE.Color(0x21634D)},
 
 }
 const bgLeftUniforms = {
 
-	colFront1: {value: new THREE.Color(0x265242)},
-	colFront2: {value: new THREE.Color(0x21634D)},
-	colFront3: {value: new THREE.Color(0x48DB9B)},
-	colBack1: {value: new THREE.Color(0x724138)},
-	colBack2: {value: new THREE.Color(0x996455)},
-	colBack3: {value: new THREE.Color(0xF0B297)},
-	groupPos: {value: new THREE.Vector3()},
-	groupDir: {value: new THREE.Vector3()}
+	col1: {value: new THREE.Color(0x48DB9B)},
+	col2: {value: new THREE.Color(0x724138)},
+
+}
+const bgRightUniforms = {
+
+	col1: {value: new THREE.Color(0x996455)},
+	col2: {value: new THREE.Color(0xF0B297)},
 
 }
 
 //dust
 let dust;
-const numDust = 4096;
+const numDust = 2048;
 
 function init() {
 
 	faceFront = this.getObjectByName("faceFront");
 	faceFrontBG = createBG(faceFront, bgFrontUniforms, 0);
-	faceFrontEnv = faceFrontBG.mesh;
-	faceFrontEnv.getWorldPosition(frontPos);
-	faceFrontEnv.getWorldDirection(frontDir);
+	faceBack = this.getObjectByName("faceBack");
+	faceBackBG = createBG(faceBack, bgBackUniforms, 0);
 	faceLeft = this.getObjectByName("faceLeft");
-	faceLeftBG = createBG(faceLeft, bgLeftUniforms, Math.PI * 0.5);
-	faceLeftEnv = faceLeftBG.mesh;
-	faceLeftEnv.getWorldPosition(leftPos);
-	faceLeftEnv.getWorldDirection(leftDir);
+	faceLeftBG = createBG(faceLeft, bgLeftUniforms, 0);
+	faceRight = this.getObjectByName("faceRight");
+	faceRightBG = createBG(faceRight, bgRightUniforms, 0);
 	faceTop = this.getObjectByName("faceTop");
+	faceTopBG = createBG(faceTop, bgTopUniforms, 0);
+	faceBottom = this.getObjectByName("faceBottom");
+	faceBottomBG = createBG(faceBottom, bgBottomUniforms, 0);
+	faces = [ faceFront, faceBack, faceLeft, faceRight, faceTop, faceBottom ];
 
-	for (let i = 0; i < numAgents; i++) {
+	for ( let i = 0; i < numAgents; i++ ) {
 
-		agents[i] = createAgent(i);
-		agentTopVis[i] = vis3(faceTop, i);
-		agentFrontVis[i] = vis1(faceFront, i);
-		agentLeftVis[i] = vis2(faceLeft, i);
+		agents[i] = createAgent( i );
+		agentsVis[i] = vis( i, faces );
 
 	}
 
 	dust = createDust();
 	faceFront.add(dust.meshFront);
+	faceBack.add(dust.meshBack);
 	faceLeft.add(dust.meshLeft);
+	faceRight.add(dust.meshRight);
 	faceTop.add(dust.meshTop);
+	faceBottom.add(dust.meshBottom);
 
 }
 
@@ -118,23 +132,14 @@ function update(event) {
 
 	}
 
+	updateSegments();
+
 	for (let i = 0; i < numAgents; i++) {
 
-		agentTopVis[i].update(deltaTime, time);
-		agentFrontVis[i].update(deltaTime, time);
-		agentLeftVis[i].update(deltaTime, time);
+		agentsVis[i].update(deltaTime, time);
 
 	}
 
-	updateSegments();
-
-	faceFrontEnv.getWorldPosition(frontPos);
-	faceFrontEnv.getWorldDirection(frontDir);
-	faceLeftEnv.getWorldPosition(leftPos);
-	faceLeftEnv.getWorldDirection(leftDir);
-
-	updateBGs(faceFrontBG, frontPos, frontDir);
-	updateBGs(faceLeftBG, leftPos, leftDir);
 	updateDust(deltaTime);
 
 }
@@ -330,24 +335,19 @@ function updateSegmentsVis() {
 
 
 //
-//vis1 - front/back
+//agent vis
 //
 
-const vis1SpikeVert = `
+const visSpikeVert = `
 #define PI 3.141592653589793
 
 attribute float spikeT;
 uniform float numSegments;
 uniform vec3 segments[32];
 
-uniform vec3 col1_1;
-uniform vec3 col1_2;
-uniform vec3 col2_1;
-uniform vec3 col2_2;
+uniform vec3 col1;
+uniform vec3 col2;
 varying vec3 vCol;
-
-uniform vec3 groupPos;
-uniform vec3 groupDir;
 
 uniform float uTime;
 uniform float numSpikeLoops;
@@ -414,13 +414,7 @@ void main() {
 	worldNormal = (modelMatrix * basisMat * vec4(normalize(worldNormal), 1.0)).xyz;
 	vec3 lightDir = normalize( vec3( 1.0, -1.0, 0.0 ) );
 	
-	vec3 vCol1 = col1_1;	
-	vec3 vCol2 = col2_1;
-
-	float dir = dot (cameraPosition - groupPos, groupDir);
-	float dirT = smoothstep(-0.01, 0.01, dir);
-
-	vCol = mix( vCol1, vCol2, dirT );
+	vCol = col1;
 
 	float lightAmt = clamp(dot(lightDir, worldNormal), 0.0, 1.0);
 	vCol *= mix( 0.1, 1.2, lightAmt);
@@ -433,7 +427,7 @@ void main() {
 }
 `;
 
-const vis1SpikeFrag = `
+const visSpikeFrag = `
 
 varying vec3 vCol;
 
@@ -444,7 +438,7 @@ void main() {
 }
 `;
 
-const vis1BodyVert = `
+const visBodyVert = `
 
 #define PI 3.141592653589793
 attribute vec3 rndPos;
@@ -493,7 +487,7 @@ void main() {
 }
 `;
 
-const vis1BodyFrag = `
+const visBodyFrag = `
 
 varying vec3 vCol;
 
@@ -509,11 +503,46 @@ void main() {
 }
 `;
 
-function vis1(faceGroup, id) {
+const visUniforms = [
+
+	{
+		spineElemR: 0.04,
+		spineElemH: 0.04,
+		bodyElemScale: 0.015,
+		numSpikeLoops: 387,
+		col1: 0xdf4266,
+		bodyCol: 0xFAE75F
+	},
+	{
+		spineElemR: 0.04,
+		spineElemH: 0.04,
+		bodyElemScale: 0.015,
+		numSpikeLoops: 387,
+		col1: 0xdf4266,
+		bodyCol: 0xFAA75F
+	},
+	{
+		spineElemR: 0.04,
+		spineElemH: 0.04,
+		bodyElemScale: 0.015,
+		numSpikeLoops: 387,
+		col1: 0xdf4266,
+		bodyCol: 0xFAE75F
+	},	{
+		spineElemR: 0.04,
+		spineElemH: 0.04,
+		bodyElemScale: 0.015,
+		numSpikeLoops: 387,
+		col1: 0xdf4266,
+		bodyCol: 0xFAA75F
+	}
+
+];
+
+function vis( id, faces ) {
 
 	//vis
 	const vis = {};
-	vis.faceGroup = faceGroup;
 	vis.id = id;
 	vis.agent = agents[id];
 	vis.tick = 0;
@@ -524,18 +553,13 @@ function vis1(faceGroup, id) {
 	vis.numSpikeInstances = 512;
 	vis.numBodyInstances = 512;
 	vis.numSpikeLoops = 387;
-	vis.visAgents = [];
 	vis.cols1 = [0xdf4266, 0xd246d8];
 	vis.cols2 = [0xFA85C4, 0x5FEAFA];
 	vis.bodyCols = [0xFAE75F, 0xFAA75F];
 
 	vis.spikeUniforms = {
-		"col1_1": {value: new THREE.Color(vis.cols1[id])},
-		"col1_2": {value: new THREE.Color(vis.cols1[1 - id])},
-		"col2_1": {value: new THREE.Color(vis.cols2[id])},
-		"col2_2": {value: new THREE.Color(vis.cols2[1 - id])},
-		"groupPos": {value: frontPos},
-		"groupDir": {value: frontDir},
+		"col1": {value: new THREE.Color(vis.cols1[id])},
+		"col2": {value: new THREE.Color(vis.cols1[1 - id])},
 		"uTime": {value: 0},
 		"spikeH": {value: vis.spineElemH},
 		"segments": {value: agentSegments[id]},
@@ -543,11 +567,9 @@ function vis1(faceGroup, id) {
 		"numSpikeLoops": {value: vis.numSpikeLoops}
 	};
 
-	vis.spikeMat = new THREE.ShaderMaterial({uniforms: vis.spikeUniforms, vertexShader: vis1SpikeVert, fragmentShader: vis1SpikeFrag});
+	vis.spikeMat = new THREE.ShaderMaterial({uniforms: vis.spikeUniforms, vertexShader: visSpikeVert, fragmentShader: visSpikeFrag});
 	vis.spikeGeo = new THREE.ConeGeometry(vis.spineElemR, vis.spineElemH, 5, 1);
 	vis.spikeGeo.translate(0, vis.spineElemH * 0.5, 0);
-	vis.spikeMesh = new THREE.InstancedMesh(vis.spikeGeo, vis.spikeMat, vis.numSpikeInstances);
-	faceGroup.add(vis.spikeMesh);
 
 	const spikeTs = new Float32Array(vis.numSpikeInstances);
 	for (let i = 0; i < vis.numSpikeInstances; i++) {
@@ -567,7 +589,7 @@ function vis1(faceGroup, id) {
 		"pixelRatio": {value: window.devicePixelRatio}
 	};
 
-	vis.bodyMat = new THREE.ShaderMaterial({uniforms: vis.bodyUniforms, vertexShader: vis1BodyVert, fragmentShader: vis1BodyFrag});
+	vis.bodyMat = new THREE.ShaderMaterial({uniforms: vis.bodyUniforms, vertexShader: visBodyVert, fragmentShader: visBodyFrag});
 	vis.bodyMat.blending = THREE.AdditiveBlending;
 
 	vis.bodyGeo = new THREE.BufferGeometry();
@@ -596,8 +618,18 @@ function vis1(faceGroup, id) {
 	vis.bodyGeo.setAttribute('bodyT', new THREE.BufferAttribute(bodyTs, 1));
 	vis.bodyGeo.setAttribute('position', new THREE.BufferAttribute(bodyPositions, 3));
 
-	vis.bodyMesh = new THREE.Points(vis.bodyGeo, vis.bodyMat);
-	faceGroup.add(vis.bodyMesh);
+
+	let spikeMesh;
+	let bodyMesh;
+	for ( let i = 0; i < faces.length; i++ ) {
+
+		spikeMesh = new THREE.InstancedMesh(vis.spikeGeo, vis.spikeMat, vis.numSpikeInstances);
+		bodyMesh = new THREE.Points(vis.bodyGeo, vis.bodyMat);
+		faces[ i ].add( bodyMesh );
+		faces[ i ].add( spikeMesh );
+		console.log( faces[ i ] );
+
+	}
 
 	vis.update = function (deltaTime, time) {
 
@@ -626,10 +658,7 @@ attribute float spikeT;
 uniform float numSegments;
 uniform vec3 segments[32];
 
-uniform vec3 col1_1;
-uniform vec3 col1_2;
-uniform vec3 col2_1;
-uniform vec3 col2_2;
+uniform vec3 col1;
 varying vec3 vCol;
 
 uniform vec3 groupPos;
@@ -696,12 +725,7 @@ void main() {
 	worldNormal = (modelMatrix * basisMat * vec4(normalize(worldNormal), 1.0)).xyz;
 	vec3 lightDir = normalize( vec3( 1.0, -1.0, 1.0 ) );
 	
-	vec3 vCol1 = mix(col1_1, col1_1 + vec3(0.0, 0.3, 0.3), sin(uTime * 2.0 + t * PI * 2.0) * 0.5 + 0.5);
-	vec3 vCol2 = mix(col2_1, col2_1 * 0.1, sin(uTime * 3.0 + t * PI * 30.0) * 0.5 + 0.5);
-
-	float dir = dot (cameraPosition - groupPos, groupDir);
-	float dirT = smoothstep(-0.01, 0.01, dir);
-	vCol = mix( vCol1, vCol2, dirT );
+	vCol = mix(col1, col1 + vec3(0.0, 0.3, 0.3), sin(uTime * 2.0 + t * PI * 2.0) * 0.5 + 0.5);
 
 	float lightAmt = clamp(dot(lightDir, worldNormal), 0.0, 1.0);
 	vCol *= mix( 0.2, 1.2, lightAmt);
@@ -728,15 +752,10 @@ const vis2BodyVert = `
 #define PI 3.141592653589793
 attribute vec3 rndPos;
 attribute float bodyT;
-uniform vec3 col1_1;
-uniform vec3 col1_2;
-uniform vec3 col2_1;
-uniform vec3 col2_2;
+uniform vec3 col1;
+uniform vec3 col2;
 uniform float uTime;
 uniform float pixelRatio;
-
-uniform vec3 groupPos;
-uniform vec3 groupDir;
 
 uniform float numSegments;
 uniform vec3 segments[32];
@@ -766,11 +785,6 @@ void main() {
 	vec4 mvPos = modelViewMatrix * vec4( pos, 1.0 );
 	gl_PointSize = 0.025 * (300.0 / -mvPos.z) * pixelRatio;
 	gl_Position = projectionMatrix * mvPos;
-
-	float dir = dot (cameraPosition - groupPos, groupDir);
-	float dirT = smoothstep(-0.01, 0.01, dir);
-	vec3 col1 = mix( col1_1, col2_1, dirT );
-	vec3 col2 = mix( col1_2, col2_2, dirT );
 
 	vCol = mix(col1, col2, moveFreq * 0.5 + 0.5);
 
@@ -815,12 +829,8 @@ function vis2(faceGroup, id) {
 	vis.bodyCols2 = [0x0091AB, 0x515875];
 
 	vis.spikeUniforms = {
-		"col1_1": {value: new THREE.Color(vis.cols1[id])},
-		"col1_2": {value: new THREE.Color(vis.cols1[1 - id])},
-		"col2_1": {value: new THREE.Color(vis.cols2[id])},
-		"col2_2": {value: new THREE.Color(vis.cols2[1 - id])},
-		"groupPos": {value: leftPos},
-		"groupDir": {value: leftDir},
+		"col1": {value: new THREE.Color(vis.cols1[id])},
+		"col2": {value: new THREE.Color(vis.cols1[1 - id])},
 		"uTime": {value: 0},
 		"spikeH": {value: vis.spineElemH},
 		"segments": {value: agentSegments[id]},
@@ -844,15 +854,11 @@ function vis2(faceGroup, id) {
 	vis.spikeGeo.setAttribute('spikeT', spikeTsBuffer);
 
 	vis.bodyUniforms = {
-		"col1_1": {value: new THREE.Color(vis.bodyCols1[id])},
-		"col1_2": {value: new THREE.Color(vis.bodyCols1[1 - id])},
-		"col2_1": {value: new THREE.Color(vis.bodyCols2[id])},
-		"col2_2": {value: new THREE.Color(vis.bodyCols2[1 - id])},
+		"col1": {value: new THREE.Color(vis.bodyCols1[id])},
+		"col2": {value: new THREE.Color(vis.bodyCols1[1 - id])},
 		"uTime": {value: 0},
 		"segments": {value: agentSegments[id]},
 		"numSegments": {value: numSegments},
-		"groupPos": {value: leftPos},
-		"groupDir": {value: leftDir},
 		"pixelRatio": {value: window.devicePixelRatio}
 	};
 
@@ -1023,14 +1029,8 @@ function vis3(faceGroup, id) {
 //
 
 const bgVert = `
-uniform vec3 colFront1;
-uniform vec3 colFront2;
-uniform vec3 colFront3;
-uniform vec3 colBack1;
-uniform vec3 colBack2;
-uniform vec3 colBack3;
-uniform vec3 groupPos;
-uniform vec3 groupDir;
+uniform vec3 col1;
+uniform vec3 col2;
 varying vec4 vCol;
 
 void main() {
@@ -1039,16 +1039,9 @@ void main() {
 	vec4 worldPos = modelMatrix * pos;
 	vec4 viewPos = viewMatrix * worldPos;
 
-	vec4 vCol1 = mix( vec4( colFront1, 1.0 ), vec4( colFront2, 1.0 ), clamp( worldPos.y, -2.0, 0.0 ) + 0.5 ) ;
-	vCol1 = mix( vCol1, vec4( colFront3, 1.0 ), smoothstep( 0.0, 1.5, worldPos.y ) ) ;
-
-	vec4 vCol2 = mix( vec4( colBack1, 1.0 ), vec4( colBack2, 1.0 ), smoothstep( -1.5, -0.5, worldPos.y ) ) ;
-	vCol2 = mix( vCol2, vec4( colBack3, 1.0 ), smoothstep( -0.5, 0.75, worldPos.y ) ) ;
-	
-	float dir = dot ( cameraPosition - groupPos, groupDir );
-	
-	vCol = mix( vCol1, vCol2, smoothstep( -0.01, 0.01, dir ) );
-	
+	vec4 col = mix( vec4( col1, 1.0 ), vec4( 0.0 ), smoothstep( -0.5, -0.2, worldPos.y ) );
+	col = mix( col, vec4( col2, 1.0 ), smoothstep( 0.2, 0.5, worldPos.y ) );
+	vCol = col;
 	gl_Position = projectionMatrix * viewPos;
 	
 }
@@ -1059,7 +1052,7 @@ const bgFrag = `
 varying vec4 vCol;
 
 highp float rand( const in vec2 uv ) {
-  const highp float a = 12.9898, b = 78.233, c = 43758.5453;
+  const highp float a = 12.1234, b = 78.9898, c = 34456.5678;
   highp float dt = dot( uv.xy, vec2( a,b ) ), sn = mod( dt, PI );
   return fract( sin( sn ) * c );
 }
@@ -1085,8 +1078,7 @@ function createBG(face, uniforms, rot) {
 	const mat = new THREE.ShaderMaterial({uniforms: uniforms, vertexShader: bgVert, fragmentShader: bgFrag});
 	mat.side = THREE.BackSide;
 	const mesh = new THREE.Mesh(geo, mat);
-	mesh.scale.setScalar(3.0);
-	mesh.rotation.y = rot;
+	mesh.scale.setScalar( 1.0 );
 	face.add(mesh);
 
 	const bgData = {
@@ -1099,14 +1091,6 @@ function createBG(face, uniforms, rot) {
 	return bgData;
 
 }
-
-function updateBGs(data, facePos, faceDir) {
-
-	data.uniforms.groupPos.value = facePos;
-	data.uniforms.groupDir.value = faceDir;
-
-}
-
 
 
 //
@@ -1207,7 +1191,7 @@ function createDust() {
 	const mat = new THREE.ShaderMaterial({uniforms: dust.dustUniforms, vertexShader: dustVert, fragmentShader: dustFrag});
 	mat.blending = THREE.AdditiveBlending;
 
-	const dustGeo = new THREE.CircleGeometry(0.0015, 5);
+	const dustGeo = new THREE.CircleGeometry(0.0015, 7);
 
 	const pointBuffer = new THREE.InstancedBufferAttribute(points, 3);
 	dustGeo.setAttribute('iPos', pointBuffer);
@@ -1216,12 +1200,18 @@ function createDust() {
 	dustGeo.setAttribute('t', tsBuffer);
 
 	const dustMeshFront = new THREE.InstancedMesh(dustGeo, mat, numDust);
+	const dustMeshBack = new THREE.InstancedMesh(dustGeo, mat, numDust);
 	const dustMeshLeft = new THREE.InstancedMesh(dustGeo, mat, numDust);
+	const dustMeshRight = new THREE.InstancedMesh(dustGeo, mat, numDust);
 	const dustMeshTop = new THREE.InstancedMesh(dustGeo, mat, numDust);
+	const dustMeshBottom = new THREE.InstancedMesh(dustGeo, mat, numDust);
 
 	dust.meshFront = dustMeshFront;
+	dust.meshBack = dustMeshBack;
 	dust.meshLeft = dustMeshLeft;
+	dust.meshRight = dustMeshRight;
 	dust.meshTop = dustMeshTop;
+	dust.meshBottom = dustMeshBottom;
 	dust.geo = dustGeo;
 	dust.mat = mat;
 
