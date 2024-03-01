@@ -1,3 +1,19 @@
+function onKeyUp(e) {
+
+	if (e.keyCode == 38) {
+
+		agentsVis[0].faceVizs[2].spikeUniforms.numSpikeLoops.value += 1;
+
+	} else if (e.keyCode == 40) {
+
+		agentsVis[0].faceVizs[2].spikeUniforms.numSpikeLoops.value -= 1;
+
+	}
+
+	console.log(agentsVis[0].faceVizs[2].spikeUniforms.numSpikeLoops);
+
+}
+//window.addEventListener("keyup", onKeyUp.bind(this));
 
 
 const numAgents = 2;
@@ -5,18 +21,16 @@ const agents = [];
 agents.length = numAgents;
 const agentsVis = [];
 agentsVis.length = numAgents;
-let segmentsVis;
-const segmentsVisCols = [0x00FFFF, 0x0FF00FF];
 
 const agentSettings = {};
 agentSettings.boundingSphereRadius = 0.25;
 agentSettings.wanderSphereDistance = 0.1;
 agentSettings.wanderSphereRadius = 8;
-agentSettings.wanderAngleMaxChange = 12;
+agentSettings.wanderAngleMaxChange = 30;
 agentSettings.wanderBoundsAngleMaxChange = 50;
-agentSettings.maxVelocity = 0.4;
-agentSettings.maxSteeringForce = 5;
-agentSettings.trailAvoidDist = 0.03;
+agentSettings.maxVelocity = 0.5;
+agentSettings.maxSteeringForce = 0.8;
+agentSettings.trailAvoidDist = 0.07;
 agentSettings.numTrailSegments = 256;
 agentSettings.numTrailBufferMult = 0.125;
 agentSettings.dustAvoidDist = 0.04;
@@ -50,76 +64,124 @@ let faces;
 const visUniforms = [
 
 	{
-		spineElemR: 0.04,
-		spineElemH: 0.04,
-		bodyElemScale: 0.015,
-		numSpikeLoops: 387,
-		col1: 0x010824,
-		col2: 0xb05452,
-		bodyCol: 0xFAE75F
+		spike: {
+			spikeR: [0.015, 0.025],
+			spikeH: [0.1, 0.15],
+			numSpikeLoops: [116, 493],
+			col1: [0x06364F, 0x2B598F],
+			col2: [0x000000, 0x000000]
+		},
+		body: {
+			col1: [0xd03754, 0x17F4FF],
+			col2: [0xFF497D, 0x9AD7FF],
+		}
 	},
 	{
-		spineElemR: 0.04,
-		spineElemH: 0.04,
-		bodyElemScale: 0.015,
-		numSpikeLoops: 387,
-		col1: 0xdf4266,
-		bodyCol: 0xFAA75F
+		spike: {
+			spikeR: [0.03, 0.02],
+			spikeH: [0.12, 0.1],
+			numSpikeLoops: [572, 234],
+			col1: [0xD75896, 0x42E4FF],
+			col2: [0x000000, 0x000000]
+		},
+		body: {
+			col1: [0x37EDB5, 0xDB61F0],
+			col2: [0x64EFF0, 0xB48DEF],
+		}
 	},
 	{
-		spineElemR: 0.04,
-		spineElemH: 0.04,
-		bodyElemScale: 0.015,
-		numSpikeLoops: 387,
-		col1: 0xdf4266,
-		bodyCol: 0xFAE75F
-	}, {
-		spineElemR: 0.04,
-		spineElemH: 0.04,
-		bodyElemScale: 0.015,
-		numSpikeLoops: 387,
-		col1: 0xdf4266,
-		bodyCol: 0xFAA75F
+		spike: {
+			spikeR: [0.08, 0.03],
+			spikeH: [0.14, 0.07],
+			numSpikeLoops: [267, 288],
+			col1: [0xB30056, 0xFF4338],
+			col2: [0x000000, 0x000000]
+		},
+		body: {
+			col1: [0xf5cb90, 0xf5f195],
+			col2: [0xc38678, 0xb6c0a8],
+		}
+	},
+	{
+		spike: {
+			spikeR: [0.03, 0.01],
+			spikeH: [0.05, 0.1],
+			numSpikeLoops: [618, 1112],
+			col1: [0x00BF9B, 0xDB5462],
+			col2: [0x000000, 0x000000]
+		},
+		body: {
+			col1: [0xdd5311, 0x32FFBE],
+			col2: [0xA33E3C, 0x1B6B78],
+		}
+	},
+	{
+		spike: {
+			spikeR: [0.02, 0.02],
+			spikeH: [0.08, 0.08],
+			numSpikeLoops: [1234, 1235],
+			col1: [0x0a0915, 0x272739],
+			col2: [0x000000, 0x000000]
+		},
+		body: {
+			col1: [0x792a37, 0xf48d81],
+			col2: [0xecd3bd, 0x9a4044],
+		}
+	},
+	{
+		spike: {
+			spikeR: [0.06, 0.01],
+			spikeH: [0.08, 0.1],
+			numSpikeLoops: [222, 123],
+			col1: [0xCE0C9E, 0x282D9E],
+			col2: [0x000000, 0x000000]
+		},
+		body: {
+			col1: [0x4149FF, 0x8D269E],
+			col2: [0x282D9E, 0xCE0C9E],
+		}
 	}
 
 ];
 
 const bgFrontUniforms = {
 
-	col1: {value: new THREE.Color(0x010824)},
-	col2: {value: new THREE.Color(0xb05452)},
+	col1: {value: new THREE.Color(0x484F57)},
+	col2: {value: new THREE.Color(0xb32944)},
 
 }
 const bgBackUniforms = {
 
-	col1: {value: new THREE.Color(0x522232)},
-	col2: {value: new THREE.Color(0x0d0f18)},
-
-}
-const bgTopUniforms = {
-
-	col1: {value: new THREE.Color(0x0c1e25)},
-	col2: {value: new THREE.Color(0x0e2d3b)},
-
-}
-const bgBottomUniforms = {
-
-	col1: {value: new THREE.Color(0x265242)},
-	col2: {value: new THREE.Color(0x21634D)},
+	col1: {value: new THREE.Color(0x171A24)},
+	col2: {value: new THREE.Color(0x85A9D4)},
 
 }
 const bgLeftUniforms = {
 
-	col1: {value: new THREE.Color(0x48DB9B)},
-	col2: {value: new THREE.Color(0x724138)},
+	col1: {value: new THREE.Color(0x0c0919)},
+	col2: {value: new THREE.Color(0x1b7e8c)},
 
 }
 const bgRightUniforms = {
 
-	col1: {value: new THREE.Color(0x996455)},
-	col2: {value: new THREE.Color(0xF0B297)},
+	col1: {value: new THREE.Color(0x330800)},
+	col2: {value: new THREE.Color(0x005E52)},
 
 }
+const bgTopUniforms = {
+
+	col1: {value: new THREE.Color(0x0a0915)},
+	col2: {value: new THREE.Color(0x1c202f)},
+
+}
+const bgBottomUniforms = {
+
+	col1: {value: new THREE.Color(0x0a0915)},
+	col2: {value: new THREE.Color(0x1c202f)},
+
+}
+
+const bgUniforms = [bgFrontUniforms, bgBackUniforms, bgLeftUniforms, bgRightUniforms, bgTopUniforms, bgBottomUniforms];
 
 //dust
 let dust;
@@ -136,9 +198,7 @@ function init() {
 	faceRight = this.getObjectByName("faceRight");
 	faceRightBG = createBG(faceRight, bgRightUniforms, 0);
 	faceTop = this.getObjectByName("faceTop");
-	faceTopBG = createBG(faceTop, bgTopUniforms, 0);
 	faceBottom = this.getObjectByName("faceBottom");
-	faceBottomBG = createBG(faceBottom, bgBottomUniforms, 0);
 	faces = [faceFront, faceBack, faceLeft, faceRight, faceTop, faceBottom];
 
 	for (let i = 0; i < numAgents; i++) {
@@ -251,8 +311,8 @@ function updateAgent(agent, deltaTime) {
 		if (agent.id == otherAgent.id) {
 			continue;
 		}
-		let attactMult = 3;
-		agent.vec1.copy(otherAgent.agentPoint).sub(agent.agentPoint).normalize().multiplyScalar(attactMult);
+		let attactMult = 1.0;
+		agent.vec1.copy(otherAgent.agentPoint).sub(agent.agentPoint).normalize().multiplyScalar(attactMult * deltaTime);
 		agent.trailAvoidForce.add(agent.vec1);
 	}
 
@@ -264,8 +324,8 @@ function updateAgent(agent, deltaTime) {
 			agent.vec1.copy(otherAgent.trailSegments[j]);
 			let dist = agent.vec1.distanceToSquared(agent.agentPoint);
 			if (dist < agentSettings.trailAvoidDist) {
-				let forceMult = (agentSettings.trailAvoidDist - dist) * 50.0;
-				agent.vec1.copy(agent.agentPoint).sub(otherAgent.trailSegments[j]).normalize().multiplyScalar(forceMult);
+				let forceMult = (agentSettings.trailAvoidDist - dist) * 100.0;
+				agent.vec1.copy(agent.agentPoint).sub(otherAgent.trailSegments[j]).normalize().multiplyScalar(forceMult * deltaTime);
 				agent.trailAvoidForce.add(agent.vec1);
 			}
 		}
@@ -324,7 +384,7 @@ function createSegmentsVis(face) {
 
 	const segmentsVis = {};
 	segmentsVis.vizs = [];
-	segmentsVis.vizs.length = numAgents
+	segmentsVis.vizs.length = numAgents;
 
 	let vis;
 	for (let i = 0; i < numAgents; i++) {
@@ -384,11 +444,15 @@ uniform vec3 segments[32];
 
 uniform vec3 col1;
 uniform vec3 col2;
-varying vec3 vCol;
+uniform vec3 bgCol1;
+uniform vec3 bgCol2;
 
 uniform float uTime;
 uniform float numSpikeLoops;
 uniform float spikeH;
+uniform float spikeR;
+
+varying vec3 vCol;
 
 vec2 rotate(vec2 v, float theta){
 
@@ -401,6 +465,7 @@ vec2 rotate(vec2 v, float theta){
 
 mat4 getBasisMat (vec3 heading, vec3 pos){
 
+	pos.x += 123.0;
 	heading = normalize(heading);
 	vec3 left = cross(heading, normalize(pos));
 	vec3 up = cross(heading, left);
@@ -411,24 +476,28 @@ mat4 getBasisMat (vec3 heading, vec3 pos){
 void main() {
 	
 	vec3 localPos = position.xyz;
-	localPos *= smoothstep(spikeT * 8.0 + 0.2, spikeT * 8.0 + 1.0, uTime);
+
+	float isTop = step(0.4, localPos.y);
+
+	localPos.xz *= spikeR;
+	localPos.y *= spikeH;
 
 	float scXY = smoothstep(0.0, 0.1, spikeT) * (1.0 - smoothstep(0.9, 1.0, spikeT));
+	//float sc = max(scXY + sin(spikeT * PI * 223.0 + uTime * -4.0) * (scXY * 0.9), 0.3);
+	float sc = scXY;
+	localPos *= sc;
+
+	localPos.y += spikeH * 0.5;
+	localPos.y += 0.02 * scXY;
+	float localPosY = localPos.y;
+
+	float tipMove = isTop * sin(uTime * 4.0 + spikeT * PI * 30.0);
+	localPos.y += tipMove * 0.01;
+
+	localPos.xy = rotate(localPos.xy, spikeT * PI * numSpikeLoops + uTime * -1.0);
 
 	vec3 worldNormal = normal;
-
-	localPos.y += 0.04;
-	float vY = localPos.y;
-
-	localPos *= mix( 0.1, 1.0, smoothstep(0.0, 0.1, spikeT) * smoothstep(1.0, 0.9, spikeT));
-	
-	localPos *= 1.0 - ( sin(-uTime * 3.0 + spikeT * PI * 122.0) * 0.5 + 0.5 ) * 0.95 * ( smoothstep(0.2, 0.3, spikeT ) * smoothstep( 0.8, 0.6, spikeT ) );
-
-	//localPos += sin(spikeT * PI * 12.0 - uTime * 2.0) * 0.02 * scXY;
-
-	localPos.xy = rotate(localPos.xy, spikeT * PI * numSpikeLoops);
-
-	worldNormal.xy = rotate(worldNormal.xy, spikeT * PI * numSpikeLoops);
+	worldNormal.xy = rotate(worldNormal.xy, spikeT * PI * numSpikeLoops + uTime * -1.0);
 	
 	int prevId = int(numSegments * spikeT);
 	int nextId = int(min(prevId+1, int(numSegments - 1.0)));
@@ -444,23 +513,30 @@ void main() {
 	mat4 basisMat = getBasisMat(heading, segments[prevId]);
 
 	localPos = (basisMat * vec4(localPos, 1.0)).xyz;
-	vec3 worldPos = iPos + localPos - heading * smoothstep(0.05, 0.0, spikeT) * 0.1;
-	vec4 mvPos = modelViewMatrix * vec4( worldPos, 1.0);
-	gl_Position = projectionMatrix * mvPos;
+	worldNormal = (basisMat * vec4(worldNormal, 1.0)).xyz;
+	worldNormal = (modelMatrix * vec4(worldNormal, 1.0)).xyz;
 
-	worldNormal = (modelMatrix * basisMat * vec4(normalize(worldNormal), 1.0)).xyz;
-	vec3 lightDir = normalize( vec3( 1.0, -1.0, 0.0 ) );
+	vec3 worldPos = iPos + localPos;
+	worldPos += -heading * smoothstep(0.05, 0.0, spikeT) * 0.05;
+	vec4 mvPos = modelViewMatrix * vec4(worldPos, 1.0);
+	gl_Position = projectionMatrix * mvPos;
 	
+	vec3 vCol1 = mix(col1, col1 + vec3(0.0, 0.3, 0.3), sin(uTime * 2.0 + t * PI * 2.0) * 0.5 + 0.5);
+
 	vCol = col1;
 
+	//top light
+	vec3 lightDir = vec3(0.0, 1.0, 0.0);
 	float lightAmt = clamp(dot(lightDir, worldNormal), 0.0, 1.0);
-	vCol *= mix( 0.1, 1.2, lightAmt);
-	vCol += vec3(lightAmt * 0.8, lightAmt * 0.2, lightAmt * 0.8);
+	vCol += lightAmt * bgCol2 * mix(1.0, 6.0, smoothstep(-0.25, 1.0, worldPos.y));
 
-	//vCol *= ( mod( float(prevId), 3.0 ) == 0.0 ) ? 0.0 : 1.0;
+	vCol *= mix( 0.1, 1.0, lightAmt);
 
-	vCol *= smoothstep( 0.05, 0.05 + spikeH, vY );
+	lightDir = vec3(0.0, -1.0, 0.0);
+	lightAmt = clamp(dot(lightDir, worldNormal), 0.0, 1.0);
+	vCol += lightAmt * bgCol1 * mix(1.0, 6.0, smoothstep(0.25, -1.0, worldPos.y));;
 
+	vCol *= smoothstep( 0.03 * scXY, 0.04 * scXY + spikeH * 0.5, localPosY );
 }
 `;
 
@@ -507,19 +583,18 @@ void main() {
 	vec3 pos = position;
 
 	float detailRotSpeed = 2.123 * -uTime + bodyT * PI * 2234.0;
-	float detailRotDist = 0.01 + ( 1.0 - scXY ) * 0.035 * smoothstep(0.0, 0.02, bodyT) + smoothstep(0.95, 1.0, bodyT) * 0.02;
+	float detailRotDist = 0.01 + ( 1.0 - scXY ) * 0.01 * smoothstep(0.0, 0.02, bodyT) + smoothstep(0.95, 1.0, bodyT) * 0.001;
 	pos.x += cos(4.0 + detailRotSpeed) * detailRotDist;
 	pos.y += cos(6.0 + detailRotSpeed + PI) * detailRotDist;
 	pos.z += cos(7.0 + detailRotSpeed + PI * 2.0) * detailRotDist;
 
-	//pos -= heading * 0.01 * smoothstep( 0.2, 0.0, bodyT );
 	pos += iPos;
 
 	vec4 mvPos = modelViewMatrix * vec4( pos, 1.0 );
-	gl_PointSize = 0.025 * (300.0 / -mvPos.z) * pixelRatio;
+	gl_PointSize = 0.025 * (300.0 / -mvPos.z) * pixelRatio * min(uTime + ( 1.0 - bodyT ) * 10.0, 1.0);
 	gl_Position = projectionMatrix * mvPos;
 	
-	vCol = mix(col1, col2, smoothstep(heading.x, -0.8, 0.8));
+	vCol = mix(col1, col2, smoothstep(sin( uTime * 0.8 + bodyT * PI * 23.0), -0.1, 0.1));
 
 }
 `;
@@ -542,106 +617,108 @@ void main() {
 
 function vis(id, faces) {
 
-	//vis
+	//vis per agent
 	const vis = {};
 	vis.id = id;
 	vis.agent = agents[id];
 	vis.tick = 0;
 
-	vis.spineElemR = 0.04;
-	vis.spineElemH = 0.07;
-	vis.bodyElemScale = 0.015;
-	vis.numSpikeInstances = 512;
-	vis.numBodyInstances = 512;
-	vis.numSpikeLoops = 387;
-	vis.cols1 = [0xdf4266, 0xd246d8];
-	vis.cols2 = [0xFA85C4, 0x5FEAFA];
-	vis.bodyCols = [0xFAE75F, 0xFAA75F];
+	let numSpikeInstances = 1024;
+	let numBodyInstances = 512;
 
-	vis.spikeUniforms = {
-		"col1": {value: new THREE.Color(vis.cols1[id])},
-		"col2": {value: new THREE.Color(vis.cols1[1 - id])},
-		"uTime": {value: 0},
-		"spikeH": {value: vis.spineElemH},
-		"segments": {value: agentSegments[id]},
-		"numSegments": {value: numSegments},
-		"numSpikeLoops": {value: vis.numSpikeLoops}
-	};
+	//shared buffers between faces
+	const spikeTs = new Float32Array(numSpikeInstances);
+	for (let i = 0; i < numSpikeInstances; i++) {
 
-	vis.spikeMat = new THREE.ShaderMaterial({uniforms: vis.spikeUniforms, vertexShader: visSpikeVert, fragmentShader: visSpikeFrag});
-	vis.spikeGeo = new THREE.ConeGeometry(vis.spineElemR, vis.spineElemH, 5, 1);
-	vis.spikeGeo.translate(0, vis.spineElemH * 0.5, 0);
-
-	const spikeTs = new Float32Array(vis.numSpikeInstances);
-	for (let i = 0; i < vis.numSpikeInstances; i++) {
-
-		spikeTs[i] = i / (vis.numSpikeInstances - 1);
+		spikeTs[i] = i / (numSpikeInstances - 1);
 
 	}
-	const spikeTsBuffer = new THREE.InstancedBufferAttribute(spikeTs, 1);
-	vis.spikeGeo.setAttribute('spikeT', spikeTsBuffer);
+	let spikeTsBuffer = new THREE.InstancedBufferAttribute(spikeTs, 1);
+	let spikeGeo = new THREE.ConeGeometry(1.0, 1.0, 6, 2);
+	spikeGeo.setAttribute('spikeT', spikeTsBuffer);
 
-	vis.bodyUniforms = {
-		"col1": {value: new THREE.Color(vis.bodyCols[id])},
-		"col2": {value: new THREE.Color(vis.bodyCols[1 - id])},
-		"uTime": {value: 0},
-		"segments": {value: agentSegments[id]},
-		"numSegments": {value: numSegments},
-		"pixelRatio": {value: window.devicePixelRatio}
-	};
-
-	vis.bodyMat = new THREE.ShaderMaterial({uniforms: vis.bodyUniforms, vertexShader: visBodyVert, fragmentShader: visBodyFrag});
-	vis.bodyMat.blending = THREE.AdditiveBlending;
-
-	vis.bodyGeo = new THREE.BufferGeometry();
-
-	const bodyPositions = new Float32Array(vis.numBodyInstances * 3);
-	const bodyRndPos = new Float32Array(vis.numBodyInstances * 3);
-	const bodyTs = new Float32Array(vis.numBodyInstances);
+	let bodyPositions = new Float32Array(numBodyInstances * 3);
+	let bodyRndPos = new Float32Array(numBodyInstances * 3);
+	let bodyTs = new Float32Array(numBodyInstances);
 	let rnd = new THREE.Vector3();
+	for (let i = 0; i < numBodyInstances; i++) {
 
-	for (let i = 0; i < vis.numBodyInstances; i++) {
+		bodyPositions[i * 3] = 0;
+		bodyPositions[i * 3 + 1] = 0;
+		bodyPositions[i * 3 + 2] = 0;
 
 		rnd.randomDirection().multiplyScalar(0.05);
 		bodyRndPos[i * 3] = rnd.x;
 		bodyRndPos[i * 3 + 1] = rnd.y;
 		bodyRndPos[i * 3 + 2] = rnd.z;
 
-		bodyTs[i] = i / (vis.numBodyInstances - 1);
-
-		bodyPositions[i * 3] = 0;
-		bodyPositions[i * 3 + 1] = 0;
-		bodyPositions[i * 3 + 2] = 0;
+		bodyTs[i] = i / (numBodyInstances - 1);
 
 	}
 
-	vis.bodyGeo.setAttribute('rndPos', new THREE.BufferAttribute(bodyRndPos, 3));
-	vis.bodyGeo.setAttribute('bodyT', new THREE.BufferAttribute(bodyTs, 1));
-	vis.bodyGeo.setAttribute('position', new THREE.BufferAttribute(bodyPositions, 3));
-
+	let bodyGeo = new THREE.BufferGeometry();
+	bodyGeo.setAttribute('rndPos', new THREE.BufferAttribute(bodyRndPos, 3));
+	bodyGeo.setAttribute('bodyT', new THREE.BufferAttribute(bodyTs, 1));
+	bodyGeo.setAttribute('position', new THREE.BufferAttribute(bodyPositions, 3));
 
 	let spikeMesh;
 	let bodyMesh;
+	vis.faceVizs = [];
+	let faceViz;
+	//vis per agent per face
 	for (let i = 0; i < faces.length; i++) {
 
-		spikeMesh = new THREE.InstancedMesh(vis.spikeGeo, vis.spikeMat, vis.numSpikeInstances);
-		bodyMesh = new THREE.Points(vis.bodyGeo, vis.bodyMat);
+		faceViz = {};
+
+		faceViz.spikeUniforms = {
+			spikeR: {value: visUniforms[i].spike.spikeR[id]},
+			spikeH: {value: visUniforms[i].spike.spikeH[id]},
+			numSpikeLoops: {value: visUniforms[i].spike.numSpikeLoops[id]},
+			col1: {value: new THREE.Color(visUniforms[i].spike.col1[id])},
+			col2: {value: new THREE.Color(visUniforms[i].spike.col2[id])},
+			bgCol1: {value: bgUniforms[i].col1.value},
+			bgCol2: {value: bgUniforms[i].col2.value},
+			uTime: {value: 0},
+			segments: {value: []},
+			numSegments: {value: numSegments}
+		}
+		faceViz.spikeMat = new THREE.ShaderMaterial({uniforms: faceViz.spikeUniforms, vertexShader: visSpikeVert, fragmentShader: visSpikeFrag});
+		spikeMesh = new THREE.InstancedMesh(spikeGeo, faceViz.spikeMat, numSpikeInstances);
+
+		faceViz.bodyUniforms = {
+			col1: {value: new THREE.Color(visUniforms[i].body.col1[id])},
+			col2: {value: new THREE.Color(visUniforms[i].body.col2[id])},
+			uTime: {value: 0},
+			segments: {value: []},
+			numSegments: {value: numSegments},
+			pixelRatio: {value: window.devicePixelRatio}
+		}
+		faceViz.bodyMat = new THREE.ShaderMaterial({uniforms: faceViz.bodyUniforms, vertexShader: visBodyVert, fragmentShader: visBodyFrag});
+		faceViz.bodyMat.blending = THREE.AdditiveBlending;
+		bodyMesh = new THREE.Points(bodyGeo, faceViz.bodyMat);
+
 		faces[i].add(bodyMesh);
 		faces[i].add(spikeMesh);
-		console.log(faces[i]);
+
+		vis.faceVizs.push(faceViz);
 
 	}
 
 	vis.update = function (deltaTime, time) {
 
 		this.tick += deltaTime;
-		this.spikeUniforms.segments.value = agentSegments[this.id];
-		this.spikeUniforms.uTime.value = this.tick;
-		this.bodyUniforms.segments.value = agentSegments[this.id];
-		this.bodyUniforms.uTime.value = this.tick;
+		let faceViz;
+		for (let i = 0; i < this.faceVizs.length; i++) {
+			faceViz = this.faceVizs[i];
+			faceViz.spikeUniforms.segments.value = agentSegments[this.id];
+			faceViz.spikeUniforms.uTime.value = this.tick;
+			faceViz.bodyUniforms.segments.value = agentSegments[this.id];
+			faceViz.bodyUniforms.uTime.value = this.tick;
+		}
 
 	}
 
+	vis.update(0.01, 0);
 	return vis;
 
 }
@@ -663,9 +740,9 @@ void main() {
 	vec4 worldPos = modelMatrix * pos;
 	vec4 viewPos = viewMatrix * worldPos;
 
-	vec4 col = mix( vec4( col1, 1.0 ), vec4( 0.0 ), smoothstep( -1.0, -0.5, worldPos.y ) );
-	col = mix( col, vec4( col2, 1.0 ), smoothstep( 0.5, 1.0, worldPos.y ) );
-	vCol = col;
+	vec4 col = mix( vec4( col1, 1.0 ), vec4( 0.0 ), smoothstep( -1.0, -0.2, worldPos.y ) );
+	col = mix( col, vec4( col2, 1.0 ), smoothstep( 0.2, 1.0, worldPos.y ) );
+	vCol = col * 0.8;
 	gl_Position = projectionMatrix * viewPos;
 	
 }
@@ -691,7 +768,7 @@ vec3 dithering( vec3 color ) {
 void main() {
 	
 	gl_FragColor = vCol;
-	gl_FragColor.rgb = dithering( gl_FragColor.rgb );
+	//gl_FragColor.rgb = dithering( gl_FragColor.rgb );
 	
 }
 `;
@@ -699,20 +776,19 @@ void main() {
 function createBG(face, uniforms, rot) {
 
 	const geo = new THREE.BoxGeometry(1, 1, 1, 1, 30, 1);
-	const mat = new THREE.ShaderMaterial({uniforms: uniforms, vertexShader: bgVert, fragmentShader: bgFrag});
+	const mat = new THREE.ShaderMaterial({uniforms: uniforms, vertexShader: bgVert, fragmentShader: bgFrag, transparent: true});
 	mat.side = THREE.BackSide;
+	mat.blending = THREE.AdditiveBlending;
 	const mesh = new THREE.Mesh(geo, mat);
-	mesh.scale.setScalar(2.0);
+	mesh.scale.set(2.0, 4.0, 2.0);
 	face.add(mesh);
 
-	const bgData = {
+	return {
 
 		mesh: mesh,
 		uniforms: uniforms
 
 	};
-
-	return bgData;
 
 }
 
